@@ -2,6 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
+<meta name="picker-tool" content="1">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>片單小工具</title>
 <link rel="manifest" href="manifest.json">
@@ -316,7 +317,17 @@ function favFromUrl(url, title) {
   return "";
 }
 function addWord(k) { if (!k) return false; S.cfg.words = S.cfg.words || []; if (S.cfg.words.includes(k)) return false; S.cfg.words.push(k); S.cfg.upd = Date.now(); return true; }
-function addFav(k) { if (!k || S.cfg.kws.includes(k)) return false; S.cfg.kws.push(k); S.cfg.upd = Date.now(); return true; }
+let collectQ = [], collectT = null;
+function addFav(k) {
+  if (!k || S.cfg.kws.includes(k)) return false; S.cfg.kws.push(k); S.cfg.upd = Date.now();
+  collectQ.push(k); clearTimeout(collectT); collectT = setTimeout(flushCollect, 400);      // 加了新女優 → 自動去採集她的影片
+  return true;
+}
+function flushCollect() {
+  const names = [...new Set(collectQ)]; collectQ = []; if (!names.length) return;
+  if (!collectorOn()) return toast(`已加入「${names[0]}」${names.length > 1 ? "等" : ""}。影片庫要採集才抽得到她：按影片庫旁的「📥 採集」`);
+  if (!openCollect(names, [])) toast("瀏覽器擋了彈出視窗：按影片庫旁的「📥 採集」再試一次");
+}
 function upsert(url, title) {
   url = (url || "").trim();
   if (!/^https?:\/\//i.test(url)) return "skip";
@@ -554,13 +565,15 @@ var u;try{u=new URL(A[i].getAttribute('href'),base);}catch(e){continue;}
 var seg=u.pathname.split('/').filter(Boolean),slug=decodeURIComponent(seg[seg.length-1]||''),m=RE.exec(slug);
 if(!m||/^(actresses|genres|makers|tags|search)$/i.test(seg[0]||''))continue;
 var code=m[1].toLowerCase(),im=A[i].querySelector('img'),alt=im?(im.getAttribute('alt')||''):'';
-var title=(alt.length>=4?alt:'')||A[i].textContent.replace(/\s+/g,' ').trim()||code.toUpperCase();
+var txt=A[i].textContent.replace(/\s+/g,' ').trim(),title=txt.length>=8?txt:(alt.length>=4?alt:'');
 var th=im?(im.getAttribute('data-src')||im.getAttribute('data-original')||im.getAttribute('src')||''):'';
 if(th){try{th=new URL(th,base).toString();}catch(e){th='';}}
 var prev=out[code];
-if(!prev||title.length>prev.t.length)out[code]={c:code,t:title.slice(0,90),u:u.toString(),b:th};
+if(!prev)prev=out[code]={c:code,t:'',u:u.toString(),b:''};
+if(title&&(!prev.t||title.length>prev.t.length))prev.t=title.slice(0,90);
+if(th&&!prev.b)prev.b=th;
 }
-return Object.keys(out).map(function(k){return out[k];});
+return Object.keys(out).map(function(k){var v=out[k];if(!v.t)v.t=v.c.toUpperCase();return v;});
 }
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 function here(){
@@ -631,11 +644,14 @@ function siteOrigin() {
   return "";
 }
 function bm3Href() { return "javascript:" + encodeURIComponent("(" + COLLECT_FN.toString() + ")(" + JSON.stringify(location.origin + location.pathname) + ")"); }
+const collectorOn = () => document.documentElement.dataset.pickerCollector === "1";
 function openCollect(names, conds) {
-  const o = siteOrigin(); if (!o) return toast("先到 ⚙ 設定網站網址（搜尋網址）");
-  const plan = { search: S.cfg.search, names, conds: conds.map(e => ({ l: e.label, t: e.tpl, m: e.max || +S.cfg.max || 20 })), K: Math.min(10, Math.max(1, +S.cfg.crawlPages || 5)) };
+  const o = siteOrigin(); if (!o) { toast("先到 ⚙ 設定網站網址（搜尋網址）"); return null; }
+  const plan = { a: collectorOn() ? 1 : 0, search: S.cfg.search, names, conds: conds.map(e => ({ l: e.label, t: e.tpl, m: e.max || +S.cfg.max || 20 })), K: Math.min(10, Math.max(1, +S.cfg.crawlPages || 5)) };
   const enc = btoa(unescape(encodeURIComponent(JSON.stringify(plan)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  window.open(o + "/#picker=" + enc, "_blank");
+  const w = window.open(o + "/#picker=" + enc, "_blank");
+  if (w && collectorOn()) toast("🔄 已開採集分頁，抓完會自動回來、自動關掉");
+  return w || null;
 }
 function mergeCand(list) {
   const now = Date.now(); let add = 0;
@@ -652,7 +668,13 @@ function mergeCand(list) {
 }
 function renderLib() {
   const n = candList().length;
-  $("libinfo").textContent = n ? `📚 影片庫 ${n} 部（最愛／全站從這裡抽）` : "📚 影片庫還是空的：最愛／全站要先「📥 採集」才抽得到影片。";
+  const li = $("libinfo"); li.textContent = n ? `📚 影片庫 ${n} 部（最愛／全站從這裡抽）　` : "📚 影片庫還是空的：最愛／全站要先採集才抽得到影片。";
+  const have = new Set(); for (const v of candList()) for (const x of v.s || []) have.add(x);
+  const fresh = S.cfg.kws.filter(k => !have.has(k));                     // 還沒採集過的女優（例如在手機上加的）
+  if (fresh.length) li.appendChild(document.createTextNode(`⚠ ${fresh.length} 位還沒採集：${fresh.slice(0, 3).join("、")}${fresh.length > 3 ? "…" : ""}　`));
+  const b = el("button", "sm", fresh.length ? "📥 採集她們" : "📥 重新採集全部最愛"); b.id = "libCollect";
+  b.onclick = () => { const names = fresh.length ? fresh : S.cfg.kws.slice(); if (!names.length) return toast("還沒有最愛女優"); if (!collectorOn()) toast("電腦：裝好採集小腳本會自動；手機不能採集，請在電腦上按"); openCollect(names, fresh.length ? [] : poolList()); };
+  li.appendChild(b);
 }
 function collectCard(msg, names, conds) {
   const d = el("div", "idle");
@@ -866,6 +888,16 @@ function applySetup(b64) {
     history.replaceState(null, "", location.pathname); setTimeout(() => toast("✅ 已套用設定（縮圖、規則）"), 300); return true;
   } catch (e) { setTimeout(() => toast("設定連結讀不懂"), 300); return false; }
 }
+window.addEventListener("message", e => {                    // 採集小腳本（同一個分頁、同網域）送回的影片＋女優照片
+  const d = e.data; if (!d || !d.pickerCollect || e.source !== window || e.origin !== location.origin) return;
+  const p = d.payload || {}, n = mergeCand(p.v || []); let ph = 0;
+  S.cfg.favImg = Object.assign({}, S.cfg.favImg || {});
+  for (const [name, url] of Object.entries(p.photos || {})) if (S.cfg.kws.includes(name) && !S.cfg.favImg[name] && /^https:\/\//.test(url)) { S.cfg.favImg[name] = url; ph++; }
+  if (ph) S.cfg.upd = Date.now();
+  save(); renderAll();
+  if (!(p.v || []).length) toast("這次沒抓到影片（網站版面可能變了）");
+  else toast(`📚 採集完成：新增 ${n} 部，共 ${candList().length} 部${ph ? `；補上 ${ph} 張女優照片` : ""}`);
+});
 window.addEventListener("message", e => {
   const d = e.data; if (!d || !d.picker || !Array.isArray(d.photos)) return;
   let host = "", oh = ""; try { host = new URL(S.cfg.search || S.cfg.list || "").hostname.replace(/^www\./, ""); } catch (x) { host = ""; }
@@ -1037,6 +1069,7 @@ $("bm3").onclick = e => { e.preventDefault(); toast("請拖到書籤列；在「
 $("bm").onclick = e => { e.preventDefault(); toast("請拖到書籤列（手機：長按複製網址，再建立書籤貼上）"); };
 renderAll(); showIdle(); handleIncoming(); fillSettings();
 if (S.sync.token) sync();
+setTimeout(renderLib, 1200);
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
 </script>
 </body>
