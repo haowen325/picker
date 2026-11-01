@@ -251,7 +251,7 @@ details.more{margin-top:10px}details.more summary{cursor:pointer;color:var(--mut
     <label class="small">標題尾巴要去掉的（正規表示式）</label><input type="text" id="cStrip">
     <label class="small">不要當關鍵字的字（一行一個；網站固定字樣、雜訊）</label><textarea id="cStop" style="min-height:70px"></textarea>
     <label class="small">縮圖網址（{code}＝番號，空白＝不顯示縮圖）</label><input type="text" id="cThumb">
-    <label class="small">採集影片：每個名字／條件抓幾頁（1~10，預設 5）</label><input type="number" id="cCrawl" min="1" max="10">
+    <label class="small">採集影片：每位女優最多抓幾頁（抓到沒有就停；1~60，預設 30，網站一頁約 12 部）</label><input type="number" id="cCrawl" min="1" max="60">
     <div class="row" style="margin:8px 0"><button class="ghost" id="libClear">清空影片庫</button></div>
     <label class="small">搜尋頁／女優頁樣式（一行一個正規表示式，第 1 組＝名字或關鍵字；網址或片名符合的，會存成最愛而不是片單）</label><textarea id="cFavPats" style="min-height:70px"></textarea>
     <div class="row" style="margin-top:8px"><button class="pri" id="cSave">儲存規則</button><button class="ghost" id="cTest">試開一個</button></div>
@@ -275,7 +275,7 @@ details.more{margin-top:10px}details.more summary{cursor:pointer;color:var(--mut
 "use strict";
 const LS = "picker.v1";
 const $ = id => document.getElementById(id);
-const DEF_CFG = { search: "", list: "", max: 20, unc: "", chn: "", code: "([a-z]{2,6}-?\\d{2,5})", strip: "\\s*[-–|]\\s*YouTube.*$", thumb: "", favPats: [], pool: [], pickN: 4, words: [], favImg: {}, stop: ["https", "http", "www", "com", "net", "org", "google", "youtube", "search", "搜尋"], kws: [], crawlPages: 5, upd: 0 };
+const DEF_CFG = { search: "", list: "", max: 20, unc: "", chn: "", code: "([a-z]{2,6}-?\\d{2,5})", strip: "\\s*[-–|]\\s*YouTube.*$", thumb: "", favPats: [], pool: [], pickN: 4, words: [], favImg: {}, stop: ["https", "http", "www", "com", "net", "org", "google", "youtube", "search", "搜尋"], kws: [], crawlMax: 30, upd: 0 };
 let S = load();                       // {items:[], gone:{}, cfg:{}, sync:{repo,token,sha}, recent:[]}
 let undoFn = null, lastPick = null, manageMode = false, sel = new Set(), syncTimer = null, syncing = false;
 
@@ -647,7 +647,7 @@ function bm3Href() { return "javascript:" + encodeURIComponent("(" + COLLECT_FN.
 const collectorOn = () => document.documentElement.dataset.pickerCollector === "1";
 function openCollect(names, conds) {
   const o = siteOrigin(); if (!o) { toast("先到 ⚙ 設定網站網址（搜尋網址）"); return null; }
-  const plan = { a: collectorOn() ? 1 : 0, search: S.cfg.search, names, conds: conds.map(e => ({ l: e.label, t: e.tpl, m: e.max || +S.cfg.max || 20 })), K: Math.min(10, Math.max(1, +S.cfg.crawlPages || 5)) };
+  const plan = { a: collectorOn() ? 1 : 0, search: S.cfg.search, names, conds: conds.map(e => ({ l: e.label, t: e.tpl, m: e.max || +S.cfg.max || 20 })), K: Math.min(60, Math.max(1, +S.cfg.crawlMax || 30)) };
   const enc = btoa(unescape(encodeURIComponent(JSON.stringify(plan)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   const w = window.open(o + "/#picker=" + enc, "_blank");
   if (w && collectorOn()) toast("🔄 已開採集分頁，抓完會自動回來、自動關掉");
@@ -962,12 +962,12 @@ function bmHref() {
 
 /* ───────── 設定、備份 ───────── */
 function fillSettings() {
-  const c = S.cfg; $("cSearch").value = c.search; $("cList").value = c.list; $("cMax").value = c.max; $("cUnc").value = c.unc; $("cChn").value = c.chn; $("cCode").value = c.code; $("cStrip").value = c.strip || ""; $("cThumb").value = c.thumb || ""; $("cCrawl").value = c.crawlPages || 5; $("cPickN").value = c.pickN || 4; $("cPool").value = (c.pool || []).join("\n"); $("cStop").value = (c.stop || []).join("\n"); $("cFavPats").value = (c.favPats || []).join("\n"); $("cFavs").value = (c.kws || []).join("\n"); $("cWords").value = (c.words || []).join("\n");
+  const c = S.cfg; $("cSearch").value = c.search; $("cList").value = c.list; $("cMax").value = c.max; $("cUnc").value = c.unc; $("cChn").value = c.chn; $("cCode").value = c.code; $("cStrip").value = c.strip || ""; $("cThumb").value = c.thumb || ""; $("cCrawl").value = c.crawlMax || 30; $("cPickN").value = c.pickN || 4; $("cPool").value = (c.pool || []).join("\n"); $("cStop").value = (c.stop || []).join("\n"); $("cFavPats").value = (c.favPats || []).join("\n"); $("cFavs").value = (c.kws || []).join("\n"); $("cWords").value = (c.words || []).join("\n");
   $("sRepo").value = S.sync.repo || ""; $("sTok").value = S.sync.token || "";
 }
 $("cSave").onclick = () => {
   const c = S.cfg; c.search = $("cSearch").value.trim(); c.list = $("cList").value.trim(); c.max = Math.max(1, parseInt($("cMax").value) || 20);
-  c.unc = $("cUnc").value.trim(); c.chn = $("cChn").value.trim(); c.code = $("cCode").value.trim() || DEF_CFG.code; c.strip = $("cStrip").value.trim(); c.thumb = $("cThumb").value.trim(); c.crawlPages = Math.min(10, Math.max(1, parseInt($("cCrawl").value) || 5)); c.pickN = Math.min(8, Math.max(1, parseInt($("cPickN").value) || 4)); c.pool = $("cPool").value.split(/\r?\n/).map(x => x.trim()).filter(Boolean); c.stop = [...new Set($("cStop").value.split(/\r?\n/).map(x => x.trim().toLowerCase()).filter(Boolean))]; c.favPats = $("cFavPats").value.split(/\r?\n/).map(x => x.trim()).filter(x => x && rx(x)); c.kws = [...new Set($("cFavs").value.split(/\r?\n/).map(x => x.trim()).filter(Boolean))]; c.words = [...new Set($("cWords").value.split(/\r?\n/).map(x => x.trim()).filter(Boolean))]; c.upd = Date.now();
+  c.unc = $("cUnc").value.trim(); c.chn = $("cChn").value.trim(); c.code = $("cCode").value.trim() || DEF_CFG.code; c.strip = $("cStrip").value.trim(); c.thumb = $("cThumb").value.trim(); c.crawlMax = Math.min(60, Math.max(1, parseInt($("cCrawl").value) || 30)); c.pickN = Math.min(8, Math.max(1, parseInt($("cPickN").value) || 4)); c.pool = $("cPool").value.split(/\r?\n/).map(x => x.trim()).filter(Boolean); c.stop = [...new Set($("cStop").value.split(/\r?\n/).map(x => x.trim().toLowerCase()).filter(Boolean))]; c.favPats = $("cFavPats").value.split(/\r?\n/).map(x => x.trim()).filter(x => x && rx(x)); c.kws = [...new Set($("cFavs").value.split(/\r?\n/).map(x => x.trim()).filter(Boolean))]; c.words = [...new Set($("cWords").value.split(/\r?\n/).map(x => x.trim()).filter(Boolean))]; c.upd = Date.now();
   for (const k of ["unc", "chn", "code", "strip"]) if (c[k] && !rx(c[k])) { c[k] = DEF_CFG[k]; toast("規則格式不對，已還原預設：" + k); }
   reanalyze();
   save(); renderAll(); toast("已儲存");
