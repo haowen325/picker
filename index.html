@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>片單小工具</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#111111">
+<link rel="icon" href="icon.svg">
+<style>
+:root{--bg:#111;--card:#1c1c1e;--line:#2c2c2e;--tx:#f2f2f2;--mut:#9a9a9e;--ac:#c2185b;--ac2:#e91e63;--ok:#2e7d32;--warn:#f9a825}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,"Noto Sans TC","Microsoft JhengHei",sans-serif;padding:0 14px calc(90px + env(safe-area-inset-bottom))}
+header{display:flex;align-items:center;gap:8px;padding:14px 0 6px}
+header h1{font-size:19px;margin:0;flex:1}
+.badge{font-size:12px;padding:2px 8px;border-radius:10px;background:var(--line);color:var(--mut);white-space:nowrap}
+.badge.ok{background:#1b3a1e;color:#8bd48f}.badge.err{background:#4a1d1d;color:#ff9a9a}
+button,.btn{font:inherit;color:var(--tx);background:var(--line);border:0;border-radius:12px;padding:10px 14px;cursor:pointer}
+button.pri{background:var(--ac);font-weight:700}
+button.big{width:100%;padding:16px;font-size:18px;border-radius:14px}
+button.ghost{background:transparent;border:1px solid var(--line)}
+button.sm{padding:5px 10px;font-size:13px;border-radius:9px}
+button:disabled{opacity:.45}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1}
+.card{background:var(--card);border-radius:14px;padding:14px;margin:12px 0}
+h2{font-size:15px;margin:0 0 8px;color:var(--mut);font-weight:600}
+input[type=text],input[type=search],input[type=password],textarea{width:100%;font:inherit;color:var(--tx);background:#0c0c0d;border:1px solid var(--line);border-radius:10px;padding:10px}
+textarea{min-height:90px}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0}
+.chip{padding:6px 12px;border-radius:16px;background:var(--line);font-size:14px;user-select:none;cursor:pointer}
+.chip.on{background:var(--ac)}
+.chip .n{opacity:.6;font-size:12px;margin-left:4px}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:#161618;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+.tabs button{flex:1;border-radius:0;background:transparent;padding:14px 4px;color:var(--mut)}
+.tabs button.on{color:#fff;font-weight:700;border-top:2px solid var(--ac)}
+.pane{display:none}.pane.on{display:block}
+.pick{border:1px solid var(--ac);background:#1d1219}
+.pick .t{font-size:17px;font-weight:700;word-break:break-word;margin:4px 0 8px}
+.tier{display:inline-block;font-size:12px;padding:1px 8px;border-radius:9px;margin-right:6px;background:var(--line)}
+.tier.t4{background:#6a1b9a}.tier.t3{background:#1565c0}.tier.t2{background:#00695c}
+.item{display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.item .body{flex:1;min-width:0}
+.item .tt{word-break:break-word}
+.item .meta{font-size:12px;color:var(--mut)}
+.item a{color:var(--tx);text-decoration:none}
+.x{color:#ff8a80;background:transparent;font-size:20px;padding:2px 10px}
+.toast{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));background:#2a2a2d;border-radius:12px;padding:12px 14px;display:none;gap:10px;align-items:center;z-index:9;box-shadow:0 4px 18px #000a}
+.toast.on{display:flex}.toast span{flex:1}
+.mut{color:var(--mut);font-size:13px}
+.small{font-size:13px}
+a.bm{display:inline-block;background:var(--ac);color:#fff;padding:8px 14px;border-radius:10px;text-decoration:none}
+label.chk{display:flex;gap:8px;align-items:center}
+</style>
+</head>
+<body>
+<header><h1>片單</h1><span id="sync" class="badge">未同步</span><button class="sm ghost" id="btnSync">同步</button></header>
+
+<!-- 抽 -->
+<section class="pane on" id="p-pick">
+  <div class="card">
+    <h2>先挑關鍵字（可不挑；點一下選／取消，可多選）</h2>
+    <div class="chips" id="chips"></div>
+    <div class="row"><input type="search" id="kw" placeholder="或自己輸入關鍵字"><button class="sm" id="kwSave" style="flex:0 0 auto">⭐ 存成最愛</button></div>
+  </div>
+  <div class="row">
+    <button class="pri big" id="rndMine">🎲 從我的片單抽</button>
+    <button class="big" id="rndWeb">🌐 全站隨機</button>
+  </div>
+  <button class="big" id="rndFav" style="margin-top:10px">⭐ 從我的最愛隨機（女優／關鍵字）</button>
+  <div id="result"></div>
+</section>
+
+<!-- 片單 -->
+<section class="pane" id="p-list">
+  <div class="card">
+    <div class="row"><input type="search" id="q" placeholder="搜尋片單"><button class="sm" id="manage" style="flex:0 0 auto">整理</button></div>
+    <div class="mut" id="count" style="margin-top:8px"></div>
+    <div class="row" id="bulk" style="display:none;margin-top:8px"><button class="sm" id="selAll">全選</button><button class="sm pri" id="delSel">刪除勾選的</button></div>
+  </div>
+  <div id="list"></div>
+</section>
+
+<!-- 加入 -->
+<section class="pane" id="p-add">
+  <div class="card">
+    <h2>貼上要加的（一行一筆網址，可以連標題一起貼；整段分享文字也行）</h2>
+    <textarea id="paste" placeholder="https://…"></textarea>
+    <div class="row" style="margin-top:8px"><button class="pri" id="doAdd">加入</button><button id="doFile">匯入書籤檔（.html）</button></div>
+    <input type="file" id="file" accept=".html,.htm,.txt,.json" style="display:none">
+    <div class="mut" id="addMsg" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <h2>看到喜歡的，一鍵加入</h2>
+    <div class="small">電腦／手機瀏覽器：把下面這顆「➕片單」拖到書籤列（手機請長按複製，建立一個書籤再把網址貼上）。在影片頁按它，就會開啟這個工具並加入。</div>
+    <p><a class="bm" id="bm" href="#">➕片單</a></p>
+    <div class="small mut">Android：先把這個工具「安裝」成 App，之後在瀏覽器按「分享」，選單裡就有「片單」，點一下就加入。</div>
+  </div>
+  <div class="card">
+    <h2>整理</h2>
+    <button id="dedupe">合併重複的（同一部只留最好的版本）</button>
+    <div class="small mut" id="dedupeMsg" style="margin-top:8px">順序：無碼＋中文 > 無碼 > 中文 > 一般</div>
+  </div>
+</section>
+
+<!-- 設定 -->
+<section class="pane" id="p-set">
+  <div class="card">
+    <h2>同步（手機和電腦共用同一份片單）</h2>
+    <div class="small mut">資料存在你自己的私人 GitHub repo。權杖只存在這台裝置，不會寫進任何檔案。</div>
+    <label class="small">repo（例：帳號/資料repo名）</label><input type="text" id="sRepo" placeholder="帳號/repo">
+    <label class="small">權杖（Fine-grained token）</label><input type="password" id="sTok" placeholder="github_pat_…">
+    <div class="row" style="margin-top:8px"><button class="pri" id="sSave">儲存並同步</button><button class="ghost" id="sOff">登出這台</button></div>
+    <div class="mut small" id="sMsg" style="margin-top:6px"></div>
+  </div>
+  <div class="card">
+    <h2>最愛（女優名字、關鍵字；也是「抽」頁上的按鈕）</h2>
+    <label class="small">一行一個，改完按下面「儲存規則」</label><textarea id="cFavs" placeholder="一行一個"></textarea>
+    <h2 style="margin-top:14px">網站與規則（存在私人資料裡，換裝置自動帶過去）</h2>
+    <label class="small">全站隨機：搜尋網址（{kw} 關鍵字、{page} 頁碼）</label><input type="text" id="cSearch">
+    <label class="small">全站隨機：沒挑關鍵字時的網址（{page}）</label><input type="text" id="cList">
+    <label class="small">隨機頁碼上限</label><input type="text" id="cMax" inputmode="numeric">
+    <label class="small">「無碼」判斷（正規表示式，比對網址與標題）</label><input type="text" id="cUnc">
+    <label class="small">「中文」判斷</label><input type="text" id="cChn">
+    <label class="small">番號判斷（第 1 組＝番號）</label><input type="text" id="cCode">
+    <label class="small">標題尾巴要去掉的（正規表示式）</label><input type="text" id="cStrip">
+    <div class="row" style="margin-top:8px"><button class="pri" id="cSave">儲存規則</button><button class="ghost" id="cTest">試開一個</button></div>
+  </div>
+  <div class="card">
+    <h2>備份</h2>
+    <div class="row"><button id="exp">匯出</button><button id="imp">匯入</button></div>
+    <input type="file" id="impf" accept=".json" style="display:none">
+  </div>
+</section>
+
+<div class="toast" id="toast"><span id="tmsg"></span><button class="sm" id="tundo">復原</button></div>
+<nav class="tabs">
+  <button class="on" data-p="pick">🎲 抽</button><button data-p="list">📋 片單</button><button data-p="add">➕ 加入</button><button data-p="set">⚙ 設定</button>
+</nav>
+
+<script>
+"use strict";
+const LS = "picker.v1";
+const $ = id => document.getElementById(id);
+const DEF_CFG = { search: "", list: "", max: 20, unc: "", chn: "", code: "([a-z]{2,6}-?\\d{2,5})", strip: "\\s*[-–|]\\s*YouTube.*$", kws: [], upd: 0 };
+let S = load();                       // {items:[], gone:{}, cfg:{}, sync:{repo,token,sha}, recent:[]}
+let undoFn = null, lastPick = null, manageMode = false, sel = new Set(), syncTimer = null, syncing = false;
+
+function load() {
+  try { const o = JSON.parse(localStorage.getItem(LS) || "{}"); return { items: o.items || [], gone: o.gone || {}, cfg: Object.assign({}, DEF_CFG, o.cfg || {}), sync: o.sync || {}, recent: o.recent || [] }; }
+  catch (e) { return { items: [], gone: {}, cfg: Object.assign({}, DEF_CFG), sync: {}, recent: [] }; }
+}
+function save(push = true) {
+  try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) { toast("存檔失敗（瀏覽器空間不足或被封鎖）"); }
+  if (push && S.sync.token) { clearTimeout(syncTimer); syncTimer = setTimeout(sync, 1500); }
+}
+
+/* ───────── 判斷番號／版本 ───────── */
+function rx(s, flags) { if (!s) return null; try { return new RegExp(s, flags || "i"); } catch (e) { return null; } }
+function slugOf(url) { try { const u = new URL(url); return decodeURIComponent(u.pathname.split("/").filter(Boolean).pop() || ""); } catch (e) { return url || ""; } }
+function analyze(url, title) {
+  const c = S.cfg, slug = slugOf(url), text = slug + " " + (title || "");
+  const unc = !!(rx(c.unc) && rx(c.unc).test(text)), chn = !!(rx(c.chn) && rx(c.chn).test(text));
+  const tier = unc && chn ? 4 : unc ? 3 : chn ? 2 : 1;
+  let code = "";
+  const r = rx(c.code);
+  if (r) {
+    const m = r.exec(slug) || r.exec(title || "");
+    if (m) code = (m[1] || m[0]).toLowerCase().replace(/^([a-z]+)-?(\d+)$/, "$1-$2");
+  }
+  return { code, tier };
+}
+const TIER_NAME = { 4: "無碼＋中文", 3: "無碼", 2: "中文", 1: "一般" };
+const keyOf = it => it.code || it.url;
+
+/* 加一筆：同番號已存在 → 留較好的版本，另一個記在 alt */
+function upsert(url, title) {
+  url = (url || "").trim();
+  if (!/^https?:\/\//i.test(url)) return "skip";
+  title = cleanTitle(title);
+  const a = analyze(url, title), now = Date.now();
+  const cur = S.items.find(x => (a.code && x.code === a.code) || x.url === url);
+  if (!cur) { S.items.push({ code: a.code, title: title || url, url, tier: a.tier, tags: [], added: now, upd: now, alt: [] }); delete S.gone[a.code || url]; return "new"; }
+  if (cur.url === url) { if (title && cur.title === cur.url) { cur.title = title; cur.upd = now; return "upd"; } return "dup"; }
+  const better = a.tier > cur.tier;
+  const worse = { url: better ? cur.url : url, title: better ? cur.title : (title || url), tier: better ? cur.tier : a.tier };
+  if (better) { cur.url = url; cur.title = title || cur.title; cur.tier = a.tier; }
+  if (!cur.alt.some(x => x.url === worse.url) && worse.url !== cur.url) cur.alt.push(worse);
+  cur.upd = now; return better ? "better" : "dup";
+}
+function cleanTitle(t) { const r = rx(S.cfg.strip); return (r ? (t || "").replace(r, "") : (t || "")).replace(/\s+/g, " ").trim(); }
+function reanalyze() { for (const it of S.items) { const a = analyze(it.url, it.title); it.tier = a.tier; if (a.code) it.code = a.code; (it.alt || []).forEach(x => { x.tier = analyze(x.url, x.title).tier; }); } }
+
+/* 把貼上的一整段文字拆成 [網址, 標題] */
+function parsePaste(text) {
+  const out = [], lines = text.split(/\r?\n/);
+  let pendingTitle = "";
+  for (const raw of lines) {
+    const line = raw.trim(); if (!line) { pendingTitle = ""; continue; }
+    const m = line.match(/https?:\/\/\S+/);
+    if (m) { const rest = line.replace(m[0], "").replace(/^[\s\-–|:：]+|[\s\-–|:：]+$/g, ""); out.push([m[0], rest || pendingTitle]); pendingTitle = ""; }
+    else pendingTitle = line;
+  }
+  return out;
+}
+function parseBookmarks(html) {
+  const out = [], re = /<a\s[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi; let m;
+  while ((m = re.exec(html))) out.push([m[1].replace(/&amp;/g, "&"), m[2].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&quot;/g, '"')]);
+  return out;
+}
+function addMany(pairs, hostOnly) {
+  const r = { new: 0, better: 0, dup: 0, upd: 0, skip: 0 };
+  for (const [u, t] of pairs) {
+    if (hostOnly) { try { if (new URL(u).hostname.replace(/^www\./, "") !== hostOnly) { r.skip++; continue; } } catch (e) { r.skip++; continue; } }
+    r[upsert(u, t)]++;
+  }
+  save(); renderAll(); return r;
+}
+function msgOf(r) { return `新增 ${r.new}、換成更好的版本 ${r.better}、重複略過 ${r.dup}` + (r.skip ? `、不是網址／別的網站略過 ${r.skip}` : ""); }
+
+/* ───────── 合併重複（整份清單重新整理一次）───────── */
+function dedupeAll(apply) {
+  const groups = new Map();
+  for (const it of S.items) { const k = keyOf(it); (groups.get(k) || groups.set(k, []).get(k)).push(it); }
+  let merged = 0; const next = [];
+  for (const [, g] of groups) {
+    if (g.length === 1) { next.push(g[0]); continue; }
+    g.sort((a, b) => b.tier - a.tier || a.added - b.added);
+    const keep = Object.assign({}, g[0]); keep.alt = (keep.alt || []).slice();
+    for (const o of g.slice(1)) { if (!keep.alt.some(x => x.url === o.url) && o.url !== keep.url) keep.alt.push({ url: o.url, title: o.title, tier: o.tier }); merged++; }
+    keep.upd = Date.now(); next.push(keep);
+  }
+  if (apply) { S.items = next; save(); renderAll(); }
+  return merged;
+}
+
+/* ───────── 關鍵字 ───────── */
+const STOP = new Set(["the", "and", "of", "a", "in", "to", "for", "on", "with", "x", "vs"]);
+function tokens(title) {
+  return (title || "").toLowerCase().split(/[\s\[\]()【】（）「」『』,，.。:：;；!！?？|\/\\\-_+#@~"'`]+/).filter(w => w.length >= 2 && !STOP.has(w) && !/^\d+$/.test(w));
+}
+function autoKws() {
+  const cnt = new Map(), c = rx(S.cfg.code);
+  for (const it of S.items) for (const w of new Set(tokens(it.title))) {
+    if (c && c.test(w) && w.replace(/-/g, "") === (it.code || "").replace(/-/g, "")) continue;
+    if (it.code && w === it.code.split("-")[0]) continue;                       // 番號的字母部分（abc-123 的 abc）不當關鍵字
+    if (rx(S.cfg.unc) && rx(S.cfg.unc).test(w) || rx(S.cfg.chn) && rx(S.cfg.chn).test(w)) continue;
+    cnt.set(w, (cnt.get(w) || 0) + 1);
+  }
+  return [...cnt].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 14);
+}
+let active = new Set();
+function renderChips() {
+  const box = $("chips"); box.textContent = "";
+  const own = S.cfg.kws.map(k => [k, 0, true]);
+  const all = own.concat(autoKws().filter(([k]) => !S.cfg.kws.includes(k)).map(([k, n]) => [k, n, false]));
+  if (!all.length) { const d = document.createElement("span"); d.className = "mut small"; d.textContent = "（片單多了會自動長出按鈕；也可以在下面輸入女優名字或關鍵字後按「存成最愛」）"; box.appendChild(d); }
+  for (const [k, n, mine] of all) {
+    const c = document.createElement("span"); c.className = "chip" + (active.has(k) ? " on" : "");
+    c.textContent = (mine ? "⭐ " : "") + k; if (n) { const s = document.createElement("span"); s.className = "n"; s.textContent = n; c.appendChild(s); }
+    c.onclick = () => { active.has(k) ? active.delete(k) : active.add(k); renderChips(); };
+    if (mine) { c.title = "長按移除這個按鈕"; let t; c.onpointerdown = () => { t = setTimeout(() => { S.cfg.kws = S.cfg.kws.filter(x => x !== k); S.cfg.upd = Date.now(); active.delete(k); save(); renderChips(); toast("已移除按鈕「" + k + "」"); }, 700); }; c.onpointerup = c.onpointerleave = () => clearTimeout(t); }
+    box.appendChild(c);
+  }
+}
+const terms = () => [...active, ...$("kw").value.split(/[\s,，]+/).filter(Boolean)].map(s => s.toLowerCase());
+$("kwSave").onclick = () => {
+  const ks = $("kw").value.split(/[\s,，]+/).filter(Boolean); if (!ks.length) return toast("先在左邊輸入關鍵字");
+  for (const k of ks) if (!S.cfg.kws.includes(k)) S.cfg.kws.push(k);
+  S.cfg.upd = Date.now(); $("kw").value = ""; save(); renderChips();
+};
+
+/* ───────── 抽 ───────── */
+function pickMine() {
+  const ts = terms();
+  const pool = S.items.filter(it => { const h = (it.title + " " + it.code).toLowerCase(); return ts.every(t => h.includes(t)); });
+  if (!pool.length) return show(card("片單裡沒有符合的", ts.length ? "關鍵字：" + ts.join("、") : "片單是空的，先到「➕ 加入」。"));
+  let cand = pool.filter(it => !S.recent.includes(keyOf(it)));
+  if (!cand.length) { S.recent = []; cand = pool; }
+  const it = cand[Math.floor(Math.random() * cand.length)];
+  S.recent.push(keyOf(it)); S.recent = S.recent.slice(-Math.min(30, Math.max(0, pool.length - 1)));
+  lastPick = it; save(false); showPick(it, pool.length);
+}
+function showPick(it, poolN) {
+  const d = document.createElement("div"); d.className = "card pick";
+  const meta = document.createElement("div"); meta.className = "mut small";
+  const t = document.createElement("span"); t.className = "tier t" + it.tier; t.textContent = TIER_NAME[it.tier]; meta.appendChild(t);
+  meta.appendChild(document.createTextNode((it.code ? it.code.toUpperCase() + "　" : "") + `（符合的共 ${poolN} 部）` + (it.alt && it.alt.length ? `　另有 ${it.alt.length} 個版本` : "")));
+  const h = document.createElement("div"); h.className = "t"; h.textContent = it.title;
+  const row = document.createElement("div"); row.className = "row";
+  const open = document.createElement("a"); open.className = "btn pri"; open.href = it.url; open.target = "_blank"; open.rel = "noopener"; open.style.cssText = "text-align:center;text-decoration:none;color:#fff;background:var(--ac);font-weight:700"; open.textContent = "▶ 開啟";
+  const no = document.createElement("button"); no.textContent = "👎 不要"; no.onclick = () => { removeItem(it, true); pickMine(); };
+  const again = document.createElement("button"); again.textContent = "🔁 再抽"; again.onclick = pickMine;
+  row.append(open, no, again); d.append(meta, h, row); show(d);
+}
+function card(t, s) { const d = document.createElement("div"); d.className = "card"; d.textContent = t + "　" + s; return d; }
+function show(node) { const r = $("result"); r.textContent = ""; r.appendChild(node); }
+/* 最愛（女優名字、關鍵字）：從最愛隨機挑一個，拿去全站隨機。有點選最愛按鈕就只在點選的裡面挑 */
+function pickFav() {
+  const favs = S.cfg.kws;
+  if (!favs.length) return show(card("還沒有最愛", "在上面輸入女優名字或關鍵字，按「存成最愛」；也可以到「⚙ 設定」一次貼很多個。"));
+  const chosen = [...active].filter(k => favs.includes(k)), pool = chosen.length ? chosen : favs;
+  let kw = pool[Math.floor(Math.random() * pool.length)];
+  if (pool.length > 1 && kw === pickFav.last) kw = pool[(pool.indexOf(kw) + 1 + Math.floor(Math.random() * (pool.length - 1))) % pool.length];
+  pickFav.last = kw; pickWeb([kw], "⭐ 最愛");
+}
+function pickWeb(given, tag) {
+  const c = S.cfg, ts = Array.isArray(given) ? given : terms(), page = 1 + Math.floor(Math.random() * Math.max(1, +c.max || 20));
+  const tpl = ts.length ? c.search : c.list;
+  if (!tpl) return show(card("還沒設定全站隨機的網址", "到「⚙ 設定」填搜尋網址（或沒挑關鍵字時用的網址）。"));
+  const url = tpl.replace("{kw}", encodeURIComponent(ts.join(" "))).replace("{page}", page);
+  const d = document.createElement("div"); d.className = "card pick";
+  const h = document.createElement("div"); h.className = "t"; h.textContent = ts.length ? `${tag || "全站隨機"}：${ts.join("、")}（第 ${page} 頁）` : `全站隨機（第 ${page} 頁）`;
+  const hint = document.createElement("div"); hint.className = "mut small"; hint.textContent = "會開新分頁到那一頁，從裡面挑；看到喜歡的，用書籤「➕片單」加回來。那頁是空的就再按一次。";
+  const row = document.createElement("div"); row.className = "row"; row.style.marginTop = "8px";
+  const open = document.createElement("a"); open.className = "btn"; open.href = url; open.target = "_blank"; open.rel = "noopener"; open.style.cssText = "text-align:center;text-decoration:none;color:#fff;background:var(--ac);font-weight:700"; open.textContent = "▶ 開啟";
+  const again = document.createElement("button"); again.textContent = "🔁 換一頁"; again.onclick = () => pickWeb(given, tag);
+  row.append(open, again);
+  if (tag) { const nx = document.createElement("button"); nx.textContent = "⭐ 換一個最愛"; nx.onclick = pickFav; row.append(nx); }
+  d.append(h, hint, row); show(d);
+  try { window.open(url, "_blank", "noopener"); } catch (e) { /* 被擋就靠上面的按鈕 */ }
+}
+$("rndMine").onclick = pickMine; $("rndWeb").onclick = () => pickWeb(); $("rndFav").onclick = pickFav;
+
+/* ───────── 片單 ───────── */
+function removeItem(it, quiet) {
+  const i = S.items.indexOf(it); if (i < 0) return;
+  S.items.splice(i, 1); S.gone[keyOf(it)] = Date.now(); save(); renderAll();
+  setUndo(`已移除「${it.title.slice(0, 24)}」`, () => { S.items.splice(Math.min(i, S.items.length), 0, it); delete S.gone[keyOf(it)]; it.upd = Date.now(); save(); renderAll(); });
+}
+function renderList() {
+  const q = $("q").value.trim().toLowerCase(), box = $("list"); box.textContent = "";
+  const items = S.items.slice().sort((a, b) => b.added - a.added).filter(it => !q || (it.title + " " + it.code).toLowerCase().includes(q));
+  $("count").textContent = `共 ${S.items.length} 部` + (q ? `，符合 ${items.length}` : "");
+  $("bulk").style.display = manageMode ? "flex" : "none"; $("manage").textContent = manageMode ? "完成" : "整理";
+  for (const it of items.slice(0, 300)) {
+    const row = document.createElement("div"); row.className = "item";
+    if (manageMode) { const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = sel.has(it); cb.onchange = () => cb.checked ? sel.add(it) : sel.delete(it); row.appendChild(cb); }
+    const b = document.createElement("div"); b.className = "body";
+    const a = document.createElement("a"); a.className = "tt"; a.href = it.url; a.target = "_blank"; a.rel = "noopener"; a.textContent = it.title;
+    const m = document.createElement("div"); m.className = "meta";
+    const t = document.createElement("span"); t.className = "tier t" + it.tier; t.textContent = TIER_NAME[it.tier]; m.appendChild(t);
+    m.appendChild(document.createTextNode((it.code ? it.code.toUpperCase() : "") + (it.alt && it.alt.length ? `　另有 ${it.alt.length} 個版本` : "")));
+    b.append(a, m); row.appendChild(b);
+    if (!manageMode) { const x = document.createElement("button"); x.className = "x"; x.textContent = "✕"; x.title = "移除"; x.onclick = () => removeItem(it); row.appendChild(x); }
+    box.appendChild(row);
+  }
+  if (items.length > 300) { const d = document.createElement("div"); d.className = "mut"; d.textContent = `只顯示前 300 筆，用上面搜尋縮小範圍。`; box.appendChild(d); }
+}
+$("q").oninput = renderList;
+$("manage").onclick = () => { manageMode = !manageMode; sel.clear(); renderList(); };
+$("selAll").onclick = () => { const q = $("q").value.trim().toLowerCase(); S.items.filter(it => !q || (it.title + " " + it.code).toLowerCase().includes(q)).forEach(i => sel.add(i)); renderList(); };
+$("delSel").onclick = () => {
+  if (!sel.size) return toast("先勾要刪的");
+  const gone = [...sel], backup = S.items.slice();
+  S.items = S.items.filter(i => !sel.has(i)); gone.forEach(i => S.gone[keyOf(i)] = Date.now()); sel.clear(); manageMode = false; save(); renderAll();
+  setUndo(`已刪除 ${gone.length} 部`, () => { S.items = backup; gone.forEach(i => { delete S.gone[keyOf(i)]; i.upd = Date.now(); }); save(); renderAll(); });
+};
+
+/* ───────── 加入 ───────── */
+$("doAdd").onclick = () => {
+  const pairs = parsePaste($("paste").value); if (!pairs.length) return $("addMsg").textContent = "沒看到網址。";
+  const r = addMany(pairs); $("addMsg").textContent = msgOf(r); $("paste").value = "";
+};
+$("doFile").onclick = () => $("file").click();
+$("file").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return; const txt = await f.text(); e.target.value = "";
+  let pairs; if (/\.json$/i.test(f.name)) { try { const o = JSON.parse(txt); pairs = (o.items || o).map(x => [x.url, x.title]); } catch (err) { return toast("JSON 讀不懂"); } }
+  else pairs = /<a\s/i.test(txt) ? parseBookmarks(txt) : parsePaste(txt);
+  let host = ""; try { host = new URL(S.cfg.search || S.cfg.list || "").hostname.replace(/^www\./, ""); } catch (err) { host = ""; }
+  const onlyHost = host && pairs.filter(p => { try { return new URL(p[0]).hostname.replace(/^www\./, "") === host; } catch (e2) { return false; } }).length ? host : "";
+  const r = addMany(pairs, onlyHost); $("addMsg").textContent = (onlyHost ? `只收 ${onlyHost} 的。` : "") + msgOf(r);
+};
+$("dedupe").onclick = () => { const n = dedupeAll(true); $("dedupeMsg").textContent = n ? `合併了 ${n} 筆重複（每部只留最好的版本，其他版本記在「另有 N 個版本」）。` : "沒有重複的。"; };
+
+/* 從網址進來的加入：書籤小工具（?add=網址&title=標題）、手機分享（?url=&text=&title=） */
+function handleIncoming() {
+  const p = new URLSearchParams(location.search);
+  const url = p.get("add") || p.get("url") || (p.get("text") || "").match(/https?:\/\/\S+/)?.[0];
+  if (!url) return;
+  const r = upsert(url, p.get("title") || (p.get("text") || "").replace(url, "")); save(); history.replaceState(null, "", location.pathname);
+  const msg = { new: "✅ 已加入片單", better: "✅ 已換成更好的版本", dup: "已經在片單裡了", upd: "已更新標題", skip: "這不是網址" }[r];
+  setTimeout(() => toast(msg), 300);
+}
+function bmHref() {
+  const base = location.origin + location.pathname;
+  return "javascript:(function(){window.open('" + base + "?add='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title),'_blank')})()";
+}
+
+/* ───────── 設定、備份 ───────── */
+function fillSettings() {
+  const c = S.cfg; $("cSearch").value = c.search; $("cList").value = c.list; $("cMax").value = c.max; $("cUnc").value = c.unc; $("cChn").value = c.chn; $("cCode").value = c.code; $("cStrip").value = c.strip || ""; $("cFavs").value = (c.kws || []).join("\n");
+  $("sRepo").value = S.sync.repo || ""; $("sTok").value = S.sync.token || "";
+}
+$("cSave").onclick = () => {
+  const c = S.cfg; c.search = $("cSearch").value.trim(); c.list = $("cList").value.trim(); c.max = Math.max(1, parseInt($("cMax").value) || 20);
+  c.unc = $("cUnc").value.trim(); c.chn = $("cChn").value.trim(); c.code = $("cCode").value.trim() || DEF_CFG.code; c.strip = $("cStrip").value.trim(); c.kws = [...new Set($("cFavs").value.split(/\r?\n/).map(x => x.trim()).filter(Boolean))]; c.upd = Date.now();
+  for (const k of ["unc", "chn", "code", "strip"]) if (c[k] && !rx(c[k])) { c[k] = DEF_CFG[k]; toast("規則格式不對，已還原預設：" + k); }
+  reanalyze();
+  save(); renderAll(); toast("已儲存");
+};
+$("cTest").onclick = () => { const t = S.cfg.list || S.cfg.search; if (!t) return toast("先填網址"); window.open(t.replace("{kw}", "").replace("{page}", "1"), "_blank", "noopener"); };
+$("exp").onclick = () => { const b = new Blob([JSON.stringify({ items: S.items, gone: S.gone, cfg: S.cfg }, null, 1)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "picker-backup.json"; a.click(); };
+$("imp").onclick = () => $("impf").click();
+$("impf").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return; e.target.value = "";
+  try { const o = JSON.parse(await f.text()); S = mergeData(S, { items: o.items || [], gone: o.gone || {}, cfg: o.cfg || {} }); save(); renderAll(); toast("已匯入（跟現有的合併）"); } catch (err) { toast("備份檔讀不懂"); }
+};
+
+/* ───────── 同步（GitHub 私人 repo 的 data.json）───────── */
+function mergeData(a, b) {
+  const gone = Object.assign({}, a.gone); for (const k in b.gone) gone[k] = Math.max(gone[k] || 0, b.gone[k]);
+  const map = new Map();
+  for (const it of [...(a.items || []), ...(b.items || [])]) {
+    const k = keyOf(it), cur = map.get(k);
+    if (!cur || (it.upd || 0) > (cur.upd || 0)) map.set(k, it);
+  }
+  const items = [...map.values()].filter(it => (gone[keyOf(it)] || 0) <= (it.upd || it.added || 0));
+  const cfg = ((b.cfg && b.cfg.upd) || 0) > ((a.cfg && a.cfg.upd) || 0) ? Object.assign({}, DEF_CFG, a.cfg, b.cfg) : Object.assign({}, DEF_CFG, b.cfg, a.cfg);
+  return Object.assign({}, a, { items, gone, cfg });
+}
+const b64e = s => btoa(unescape(encodeURIComponent(s))), b64d = s => decodeURIComponent(escape(atob(s.replace(/\s/g, ""))));
+async function gh(method, body) {
+  const url = `https://api.github.com/repos/${S.sync.repo}/contents/data.json`;
+  const r = await fetch(url, { method, headers: { Authorization: "Bearer " + S.sync.token, Accept: "application/vnd.github+json", "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined, cache: "no-store" });
+  return r;
+}
+function setSync(t, cls) { const b = $("sync"); b.textContent = t; b.className = "badge " + (cls || ""); }
+async function sync() {
+  if (!S.sync.repo || !S.sync.token) return setSync("未同步");
+  if (syncing) return; syncing = true; setSync("同步中…");
+  try {
+    for (let tries = 0; tries < 3; tries++) {
+      let r = await gh("GET"), remote = { items: [], gone: {}, cfg: {} }, sha;
+      if (r.status === 404) sha = undefined;
+      else if (r.ok) { const j = await r.json(); sha = j.sha; try { remote = JSON.parse(b64d(j.content)); } catch (e) { throw new Error("遠端 data.json 壞了"); } }
+      else throw new Error(r.status === 401 || r.status === 403 ? "權杖無效或沒有這個 repo 的權限" : "讀取失敗 " + r.status);
+      const merged = mergeData(S, remote), same = JSON.stringify([merged.items, merged.gone, merged.cfg]) === JSON.stringify([remote.items, remote.gone, remote.cfg]);
+      const ruleChanged = JSON.stringify([S.cfg.unc, S.cfg.chn, S.cfg.code]) !== JSON.stringify([merged.cfg.unc, merged.cfg.chn, merged.cfg.code]);
+      S = merged; if (ruleChanged) reanalyze(); localStorage.setItem(LS, JSON.stringify(S)); renderAll();
+      if (same && sha) break;
+      const put = await gh("PUT", { message: "sync " + new Date().toISOString(), content: b64e(JSON.stringify({ items: S.items, gone: S.gone, cfg: S.cfg }, null, 1)), sha });
+      if (put.ok) break;
+      if (put.status === 409 || put.status === 422) continue;           // 別台剛好也存了 → 重讀再合併
+      throw new Error(put.status === 404 ? "找不到這個 repo（名稱打對了嗎？權杖要能讀寫它）" : "寫入失敗 " + put.status);
+    }
+    setSync("已同步 " + new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" }), "ok"); $("sMsg").textContent = "";
+  } catch (e) { setSync("同步失敗", "err"); $("sMsg").textContent = "⚠ " + (e.message || e); }
+  finally { syncing = false; }
+}
+$("btnSync").onclick = sync;
+$("sSave").onclick = () => { S.sync.repo = $("sRepo").value.trim().replace(/^https?:\/\/github\.com\//, "").replace(/\.git$/, ""); S.sync.token = $("sTok").value.trim(); save(false); sync(); };
+$("sOff").onclick = () => { S.sync = {}; save(false); fillSettings(); setSync("未同步"); $("sMsg").textContent = "已登出這台（片單還在這台裝置上）"; };
+document.addEventListener("visibilitychange", () => { if (!document.hidden) sync(); });
+
+/* ───────── 共用 ───────── */
+function toast(m) { $("tmsg").textContent = m; $("tundo").style.display = "none"; $("toast").classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => $("toast").classList.remove("on"), 3000); }
+function setUndo(m, fn) { undoFn = fn; $("tmsg").textContent = m; $("tundo").style.display = ""; $("toast").classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => { $("toast").classList.remove("on"); undoFn = null; }, 7000); }
+$("tundo").onclick = () => { if (undoFn) undoFn(); undoFn = null; $("toast").classList.remove("on"); };
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tabs button,.pane").forEach(x => x.classList.remove("on"));
+  b.classList.add("on"); $("p-" + b.dataset.p).classList.add("on"); if (b.dataset.p === "set") fillSettings();
+});
+function renderAll() { renderChips(); renderList(); }
+$("bm").href = bmHref();
+$("bm").onclick = e => { e.preventDefault(); toast("請拖到書籤列（手機：長按複製網址，再建立書籤貼上）"); };
+renderAll(); handleIncoming(); fillSettings();
+if (S.sync.token) sync();
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+</script>
+</body>
+</html>
