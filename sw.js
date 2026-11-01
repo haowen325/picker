@@ -1,4 +1,4 @@
-const CACHE = "picker-v9";
+const CACHE = "picker-v10";
 const FILES = ["./", "./index.html", "./manifest.json", "./icon.svg", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {

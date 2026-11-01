@@ -276,7 +276,19 @@ details.more{margin-top:10px}details.more summary{cursor:pointer;color:var(--mut
 const LS = "picker.v1";
 const $ = id => document.getElementById(id);
 const DEF_CFG = { search: "", list: "", max: 20, unc: "", chn: "", code: "([a-z]{2,6}-?\\d{2,5})", strip: "\\s*[-–|]\\s*YouTube.*$", thumb: "", favPats: [], pool: [], pickN: 4, words: [], favImg: {}, stop: ["https", "http", "www", "com", "net", "org", "google", "youtube", "search", "搜尋"], kws: [], crawlMax: 30, upd: 0 };
-let S = load();                       // {items:[], gone:{}, cfg:{}, sync:{repo,token,sha}, recent:[]}
+let S = load();
+const cfgSnap = {};
+function snapCfg() { for (const k in S.cfg) if (k !== "ts" && k !== "upd") cfgSnap[k] = JSON.stringify(S.cfg[k]); }
+function stampCfg() {                 // 比對上次存檔，哪個設定欄位變了就記下時間（合併時以欄位為單位，新的贏）
+  const ts = S.cfg.ts = S.cfg.ts || {}, now = Date.now();
+  for (const k in S.cfg) { if (k === "ts" || k === "upd") continue; const j = JSON.stringify(S.cfg[k]); if (cfgSnap[k] !== j) { ts[k] = now; cfgSnap[k] = j; } }
+}
+const DEFAULT_POOL = ["最新=https://missav.ai/new?page={page}|100", "新作上市=https://missav.ai/release?page={page}|100", "無碼流出=https://missav.ai/uncensored-leak?page={page}|100", "中文字幕=https://missav.ai/chinese-subtitle?page={page}|100", "今日熱門=https://missav.ai/today-hot?page={page}|5", "本週熱門=https://missav.ai/weekly-hot?page={page}|10", "本月熱門=https://missav.ai/monthly-hot?page={page}|20", "FC2=https://missav.ai/fc2?page={page}|20", "SIRO素人=https://missav.ai/siro?page={page}|20"];
+if (!S.cfg.poolSeeded) {              // 第一次：隨機來源是空的就放入網站上驗證過的分類（之後你改的以你的為準）
+  if (!(S.cfg.pool || []).length) S.cfg.pool = DEFAULT_POOL.slice();
+  S.cfg.poolSeeded = 1;
+}
+snapCfg();                       // {items:[], gone:{}, cfg:{}, sync:{repo,token,sha}, recent:[]}
 let undoFn = null, lastPick = null, manageMode = false, sel = new Set(), syncTimer = null, syncing = false;
 
 function load() {
@@ -284,6 +296,7 @@ function load() {
   catch (e) { return { items: [], gone: {}, cfg: Object.assign({}, DEF_CFG), sync: {}, recent: [], cand: [], cgone: {} }; }
 }
 function save(push = true) {
+  stampCfg();
   try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) { toast("存檔失敗（瀏覽器空間不足或被封鎖）"); }
   if (push && S.sync.token) { clearTimeout(syncTimer); syncTimer = setTimeout(sync, 1500); }
 }
@@ -761,7 +774,7 @@ function pickWeb() {
   };
   const parts = [acts.length ? `女優 ${acts.join("、")}（任一位）` : "", kws.length ? `關鍵字 ${kws.join("＋")}（要同時符合）` : "", conds.length ? `條件 ${conds.map(e => e.label).join("、")}（任一個）` : ""].filter(Boolean);
   pickVideos(f, parts.length ? `🌐 ${parts.join("　")}。` : "🌐 全站：從整個影片庫隨機挑。",
-    `影片庫裡沒有${parts.length ? "同時符合 " + parts.join("、") + " 的" : ""}影片`, [...acts, ...kws], conds);
+    `影片庫裡沒有${parts.length ? "同時符合 " + parts.join("、") + " 的" : ""}影片`, [...acts, ...kws], parts.length ? conds : poolList());
 }
 $("doDraw").onclick = () => { if (mode === "list") pickMine(); else if (mode === "fav") pickFav(); else pickWeb(); };
 $("libClear").onclick = () => { if (!confirm("清空影片庫？（片單不受影響）")) return; for (const v of candList()) S.cgone[v.c] = Date.now(); S.cand = []; save(); renderLib(); toast("影片庫已清空"); };
@@ -989,7 +1002,14 @@ function mergeData(a, b) {
     if (!cur || (it.upd || 0) > (cur.upd || 0)) map.set(k, it);
   }
   const items = [...map.values()].filter(it => (gone[keyOf(it)] || 0) <= (it.upd || it.added || 0));
-  const cfg = ((b.cfg && b.cfg.upd) || 0) > ((a.cfg && a.cfg.upd) || 0) ? Object.assign({}, DEF_CFG, a.cfg, b.cfg) : Object.assign({}, DEF_CFG, b.cfg, a.cfg);
+  const ca = a.cfg || {}, cb = b.cfg || {}, ta = ca.ts || {}, tb = cb.ts || {}, cfg = {}, ts = {};
+  for (const k of new Set([...Object.keys(DEF_CFG), ...Object.keys(ca), ...Object.keys(cb)])) {
+    if (k === "ts" || k === "upd") continue;
+    const x = ta[k] || 0, y = tb[k] || 0;
+    const useB = y !== x ? y > x : (k in cb && !(k in ca)) || (k in cb && (cb.upd || 0) > (ca.upd || 0));   // 沒有欄位時間的舊資料，退回整份 upd 比較
+    cfg[k] = useB ? cb[k] : (k in ca ? ca[k] : DEF_CFG[k]); ts[k] = Math.max(x, y);
+  }
+  cfg.ts = ts; cfg.upd = Math.max(ca.upd || 0, cb.upd || 0);
   const cgone = Object.assign({}, a.cgone); for (const k in (b.cgone || {})) cgone[k] = Math.max(cgone[k] || 0, b.cgone[k]);
   const cm = new Map();
   for (const v of [...(a.cand || []), ...(b.cand || [])]) {
@@ -1019,7 +1039,7 @@ async function sync() {
       else throw new Error(r.status === 401 || r.status === 403 ? "權杖無效或沒有這個 repo 的權限" : "讀取失敗 " + r.status);
       const merged = mergeData(S, remote), same = JSON.stringify([merged.items, merged.gone, merged.cfg, merged.cand, merged.cgone]) === JSON.stringify([remote.items, remote.gone, remote.cfg, remote.cand || [], remote.cgone || {}]);
       const ruleChanged = JSON.stringify([S.cfg.unc, S.cfg.chn, S.cfg.code]) !== JSON.stringify([merged.cfg.unc, merged.cfg.chn, merged.cfg.code]);
-      S = merged; if (ruleChanged) reanalyze(); localStorage.setItem(LS, JSON.stringify(S)); renderAll();
+      S = merged; snapCfg(); if (ruleChanged) reanalyze(); localStorage.setItem(LS, JSON.stringify(S)); renderAll();
       if (same && sha) break;
       const put = await gh("PUT", { message: "sync " + new Date().toISOString(), content: b64e(JSON.stringify({ items: S.items, gone: S.gone, cfg: S.cfg, cand: S.cand, cgone: S.cgone })), sha });
       if (put.ok) break;
