@@ -10,7 +10,7 @@
 <style>
 :root{--bg:#111;--card:#1c1c1e;--line:#2c2c2e;--tx:#f2f2f2;--mut:#9a9a9e;--ac:#c2185b;--ac2:#e91e63;--ok:#2e7d32;--warn:#f9a825}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,"Noto Sans TC","Microsoft JhengHei",sans-serif;padding:0 14px calc(90px + env(safe-area-inset-bottom))}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,"Noto Sans TC","Microsoft JhengHei",sans-serif;padding:0 14px calc(40px + env(safe-area-inset-bottom))}
 header{display:flex;align-items:center;gap:8px;padding:14px 0 6px}
 header h1{font-size:19px;margin:0;flex:1}
 .badge{font-size:12px;padding:2px 8px;border-radius:10px;background:var(--line);color:var(--mut);white-space:nowrap}
@@ -44,66 +44,119 @@ textarea{min-height:90px}
 .item .meta{font-size:12px;color:var(--mut)}
 .item a{color:var(--tx);text-decoration:none}
 .x{color:#ff8a80;background:transparent;font-size:20px;padding:2px 10px}
-.toast{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));background:#2a2a2d;border-radius:12px;padding:12px 14px;display:none;gap:10px;align-items:center;z-index:9;box-shadow:0 4px 18px #000a}
+.toast{position:fixed;left:12px;right:12px;bottom:calc(16px + env(safe-area-inset-bottom));background:#2a2a2d;border-radius:12px;padding:12px 14px;display:none;gap:10px;align-items:center;z-index:9;box-shadow:0 4px 18px #000a}
 .toast.on{display:flex}.toast span{flex:1}
 .mut{color:var(--mut);font-size:13px}
 .small{font-size:13px}
 a.bm{display:inline-block;background:var(--ac);color:#fff;padding:8px 14px;border-radius:10px;text-decoration:none}
 label.chk{display:flex;gap:8px;align-items:center}
+.grid{display:grid;gap:10px;align-items:start}
+.grid.s{grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:7px}
+.grid.m{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.grid.l{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.tile{background:var(--card);border-radius:10px;overflow:hidden;position:relative}
+.tile .ph{position:relative;display:block;background:#222}
+.tile img{width:100%;height:auto;min-height:56px;display:block}
+.tile .noimg{display:flex;align-items:center;justify-content:center;min-height:90px;color:var(--mut);font-size:13px;padding:6px;text-align:center;word-break:break-all}
+.tile .cap{margin:6px 8px 8px;padding:0;font-size:13px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--tx);text-decoration:none}
+.grid.s .cap{font-size:11px;margin:4px 5px 6px;-webkit-line-clamp:2}
+.grid.l .cap{font-size:15px;-webkit-line-clamp:3}
+.tile .rm{position:absolute;top:4px;right:4px;background:#000b;border-radius:50%;width:28px;height:28px;padding:0;color:#ff8a80;font-size:15px;line-height:28px}
+.tile .ck{position:absolute;top:6px;left:6px;width:22px;height:22px;z-index:2}
+.tile .tg{position:absolute;left:4px;bottom:4px;font-size:11px;padding:0 7px;border-radius:8px;background:#000b}
+.tile .tg.t4{background:#6a1b9a}.tile .tg.t3{background:#1565c0}.tile .tg.t2{background:#00695c}
+.grid.s .tg{display:none}
+.views{display:flex;gap:6px;margin-top:8px}.views button{flex:1;padding:6px 0;font-size:14px}.views button.on{background:var(--ac)}
+.pick .ph{display:block;margin:6px 0;border-radius:10px;overflow:hidden;background:#222}.pick .ph img{width:100%;height:auto;display:block}
+
+/* ===== 2026-11-02 設計改版 ===== */
+:root{--bg:#0e0e11;--card:#18181c;--line:#2a2a31;--ac:#d81b60;--ac2:#8e24aa;--grad:linear-gradient(135deg,#d81b60,#8e24aa)}
+body{background:radial-gradient(1200px 500px at 50% -120px,#2a1230 0%,var(--bg) 60%) no-repeat,var(--bg);background-attachment:fixed}
+header{padding:16px 0 8px}header h1{font-size:20px;letter-spacing:2px}
+.card{border-radius:18px;border:1px solid #ffffff0d}
+button.pri,.tabs button.on{background:var(--grad)}
+.tabs button.on{background:transparent;border-top:2px solid var(--ac);color:#fff}
+.tabs{background:#121216ee;backdrop-filter:blur(10px)}
+.chip{background:#23232a;border:1px solid #ffffff0d}.chip.on{background:var(--grad);border-color:transparent}
+.drawbar{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.drawbar button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 4px 12px;border-radius:18px;font-size:15px;font-weight:700;background:#1f1f25;border:1px solid #ffffff12}
+.drawbar button .ic{font-size:26px;line-height:1}
+.drawbar button.pri{background:var(--grad);border-color:transparent;box-shadow:0 8px 24px #d81b6055}
+.drawbar button:active{transform:scale(.97)}
+.pick{padding:0;overflow:hidden;border:1px solid #ffffff14;background:var(--card);box-shadow:0 14px 40px #000a}
+.pick .ph{position:relative;display:block;margin:0;border-radius:0;background:#222;min-height:150px}
+.pick .ph img{width:100%;height:auto;display:block}
+.pick .ph .noimg{min-height:180px;font-size:22px;font-weight:700;color:#fff6;background:linear-gradient(135deg,#2a1a30,#1a1a22)}
+.pick .ph .bd{position:absolute;left:10px;top:10px;font-size:12px;padding:2px 10px;border-radius:10px;background:#000b;backdrop-filter:blur(4px)}
+.pick .ph .bd.t4{background:#6a1b9ae6}.pick .ph .bd.t3{background:#1565c0e6}.pick .ph .bd.t2{background:#00695ce6}
+.pick .ph .cd{position:absolute;left:0;right:0;bottom:0;padding:26px 12px 8px;font-size:13px;font-weight:700;letter-spacing:1px;background:linear-gradient(transparent,#000c)}
+.pick .info{padding:12px 14px 14px}
+.pick .t{font-size:17px;font-weight:700;line-height:1.4;margin:0 0 4px;word-break:break-word}
+.pick .sub{font-size:12px;color:var(--mut);margin-bottom:12px}
+.pick .acts{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px}
+.pick .acts .btn,.pick .acts button{display:block;text-align:center;text-decoration:none;color:var(--tx);background:#25252c;border:0;border-radius:14px;padding:13px 6px;font-size:15px;font-weight:600}
+.pick .acts .go{background:var(--grad);color:#fff;font-weight:800;box-shadow:0 6px 18px #d81b6055}
+.idle{text-align:center;padding:34px 16px;border-radius:18px;background:#16161a;border:1px dashed #ffffff22;color:var(--mut)}
+.idle .big{font-size:46px;line-height:1.1;margin-bottom:6px}
+.kwbox h2{margin-bottom:6px}
+.tile .ph,.pick .ph{color:#fff;text-decoration:none}.tile .tg,.pick .ph .bd,.pick .ph .cd{color:#fff}
+.hrow{display:flex;align-items:center;justify-content:space-between;gap:8px}.hbtn{display:flex;gap:6px}
+.overlay{position:fixed;inset:0;background:var(--bg);overflow:auto;z-index:20;padding:0 14px 60px;display:none}.overlay.on{display:block}
+.ovh{display:flex;align-items:center;justify-content:space-between;padding:14px 0 6px;position:sticky;top:0;background:var(--bg);z-index:2}.ovh h1{font-size:19px;margin:0}
+details.more{margin-top:10px}details.more summary{cursor:pointer;color:var(--mut);font-size:14px}
+.chip .x2{margin-left:6px;color:#ff8a80;font-weight:700}
+#kw,#q{margin-top:8px}
 </style>
 </head>
 <body>
-<header><h1>片單</h1><span id="sync" class="badge">未同步</span><button class="sm ghost" id="btnSync">同步</button></header>
+<header><h1>片單</h1><span id="sync" class="badge">未同步</span><button class="sm ghost" id="btnSync">同步</button><button class="sm ghost" id="btnSet" title="設定">⚙</button></header>
 
-<!-- 抽 -->
-<section class="pane on" id="p-pick">
-  <div class="card">
-    <h2>先挑關鍵字（可不挑；點一下選／取消，可多選）</h2>
-    <div class="chips" id="chips"></div>
-    <div class="row"><input type="search" id="kw" placeholder="或自己輸入關鍵字"><button class="sm" id="kwSave" style="flex:0 0 auto">⭐ 存成最愛</button></div>
+<!-- 結果：抽到的在最上面 -->
+<div id="result"></div>
+<div class="drawbar">
+  <button class="pri" id="rndMine"><span class="ic">🎲</span><span>片單</span></button>
+  <button id="rndFav"><span class="ic">⭐</span><span>最愛</span></button>
+  <button id="rndWeb"><span class="ic">🌐</span><span>全站</span></button>
+</div>
+
+<!-- 最愛（女優名字、關鍵字） -->
+<div class="card kwbox">
+  <h2 class="hrow"><span>⭐ 最愛　<span class="mut small">點一下＝只從這些裡抽</span></span><span class="hbtn"><button class="sm ghost" id="favEdit">編輯</button><button class="sm ghost" id="favSug">💡 建議</button></span></h2>
+  <div class="chips" id="chips"></div>
+  <input type="search" id="kw" placeholder="臨時輸入關鍵字（只這次用，不會存）">
+  <div id="sugbox" style="display:none;margin-top:10px">
+    <div class="small mut" id="tidyMsg">下面是片名裡常出現的名字／關鍵字，點一下加進最愛（很多人一起的片名自己略過）。</div>
+    <div class="chips" id="sugg"></div>
+    <button class="sm" id="tidy">把片單裡的搜尋頁／女優頁轉成最愛</button>
   </div>
-  <div class="row">
-    <button class="pri big" id="rndMine">🎲 從我的片單抽</button>
-    <button class="big" id="rndWeb">🌐 全站隨機</button>
-  </div>
-  <button class="big" id="rndFav" style="margin-top:10px">⭐ 從我的最愛隨機（女優／關鍵字）</button>
-  <div id="result"></div>
-</section>
+</div>
+
+<!-- 加入：影片網址 → 片單；名字／關鍵字 → 最愛 -->
+<div class="card addcard">
+  <h2>➕ 加入</h2>
+  <textarea id="paste" placeholder="貼上影片網址（可以很多筆）→ 加進片單&#10;輸入女優名字或關鍵字 → 加進最愛（用逗號或換行分開）"></textarea>
+  <div class="row" style="margin-top:8px"><button class="pri" id="doAdd">加入</button><button id="doFile">匯入書籤檔</button></div>
+  <input type="file" id="file" accept=".html,.htm,.txt,.json" style="display:none">
+  <div class="mut small" id="addMsg" style="margin-top:8px"></div>
+  <details class="more"><summary>更快的方法：看到喜歡的影片一鍵加入</summary>
+    <div class="small" style="margin:8px 0">電腦：把下面這顆「➕片單」拖到書籤列，在影片頁按它就會加入。手機（Android）：先把這個工具「安裝」成 App，之後在瀏覽器按「分享」，選單裡就有「片單」。</div>
+    <a class="bm" id="bm" href="#">➕片單</a>
+  </details>
+</div>
 
 <!-- 片單 -->
-<section class="pane" id="p-list">
-  <div class="card">
-    <div class="row"><input type="search" id="q" placeholder="搜尋片單"><button class="sm" id="manage" style="flex:0 0 auto">整理</button></div>
-    <div class="mut" id="count" style="margin-top:8px"></div>
-    <div class="row" id="bulk" style="display:none;margin-top:8px"><button class="sm" id="selAll">全選</button><button class="sm pri" id="delSel">刪除勾選的</button></div>
-  </div>
-  <div id="list"></div>
-</section>
+<div class="card">
+  <h2 class="hrow"><span>📋 片單　<span class="mut small" id="count"></span></span><span class="hbtn"><button class="sm ghost" id="manage">整理</button></span></h2>
+  <input type="search" id="q" placeholder="搜尋片單">
+  <div class="views" id="views"><button data-v="l">大圖</button><button data-v="m">中圖</button><button data-v="s">小圖</button><button data-v="list">清單</button></div>
+  <div class="row" id="bulk" style="display:none;margin-top:8px"><button class="sm" id="selAll">全選</button><button class="sm pri" id="delSel">刪除勾選的</button></div>
+</div>
+<div id="list"></div>
 
-<!-- 加入 -->
-<section class="pane" id="p-add">
-  <div class="card">
-    <h2>貼上要加的（一行一筆網址，可以連標題一起貼；整段分享文字也行）</h2>
-    <textarea id="paste" placeholder="https://…"></textarea>
-    <div class="row" style="margin-top:8px"><button class="pri" id="doAdd">加入</button><button id="doFile">匯入書籤檔（.html）</button></div>
-    <input type="file" id="file" accept=".html,.htm,.txt,.json" style="display:none">
-    <div class="mut" id="addMsg" style="margin-top:8px"></div>
-  </div>
-  <div class="card">
-    <h2>看到喜歡的，一鍵加入</h2>
-    <div class="small">電腦／手機瀏覽器：把下面這顆「➕片單」拖到書籤列（手機請長按複製，建立一個書籤再把網址貼上）。在影片頁按它，就會開啟這個工具並加入。</div>
-    <p><a class="bm" id="bm" href="#">➕片單</a></p>
-    <div class="small mut">Android：先把這個工具「安裝」成 App，之後在瀏覽器按「分享」，選單裡就有「片單」，點一下就加入。</div>
-  </div>
-  <div class="card">
-    <h2>整理</h2>
-    <button id="dedupe">合併重複的（同一部只留最好的版本）</button>
-    <div class="small mut" id="dedupeMsg" style="margin-top:8px">順序：無碼＋中文 > 無碼 > 中文 > 一般</div>
-  </div>
-</section>
+<!-- 設定視窗（不常用：同步、網站規則、備份） -->
+<div class="overlay" id="p-set">
+  <div class="ovh"><h1>設定</h1><button class="pri" id="setClose">完成</button></div>
 
-<!-- 設定 -->
-<section class="pane" id="p-set">
   <div class="card">
     <h2>同步（手機和電腦共用同一份片單）</h2>
     <div class="small mut">資料存在你自己的私人 GitHub repo。權杖只存在這台裝置，不會寫進任何檔案。</div>
@@ -123,6 +176,9 @@ label.chk{display:flex;gap:8px;align-items:center}
     <label class="small">「中文」判斷</label><input type="text" id="cChn">
     <label class="small">番號判斷（第 1 組＝番號）</label><input type="text" id="cCode">
     <label class="small">標題尾巴要去掉的（正規表示式）</label><input type="text" id="cStrip">
+    <label class="small">不要當關鍵字的字（一行一個；網站固定字樣、雜訊）</label><textarea id="cStop" style="min-height:70px"></textarea>
+    <label class="small">縮圖網址（{code}＝番號，空白＝不顯示縮圖）</label><input type="text" id="cThumb">
+    <label class="small">搜尋頁／女優頁網址樣式（一行一個正規表示式，第 1 組＝名字或關鍵字；符合的網址會存成最愛）</label><textarea id="cFavPats" style="min-height:70px"></textarea>
     <div class="row" style="margin-top:8px"><button class="pri" id="cSave">儲存規則</button><button class="ghost" id="cTest">試開一個</button></div>
   </div>
   <div class="card">
@@ -130,18 +186,21 @@ label.chk{display:flex;gap:8px;align-items:center}
     <div class="row"><button id="exp">匯出</button><button id="imp">匯入</button></div>
     <input type="file" id="impf" accept=".json" style="display:none">
   </div>
-</section>
+
+  <div class="card">
+    <h2>整理</h2>
+    <button id="dedupe">合併重複的（同一部只留最好的版本）</button>
+    <div class="small mut" id="dedupeMsg" style="margin-top:8px">順序：無碼＋中文 > 無碼 > 中文 > 一般</div>
+  </div>
+</div>
 
 <div class="toast" id="toast"><span id="tmsg"></span><button class="sm" id="tundo">復原</button></div>
-<nav class="tabs">
-  <button class="on" data-p="pick">🎲 抽</button><button data-p="list">📋 片單</button><button data-p="add">➕ 加入</button><button data-p="set">⚙ 設定</button>
-</nav>
 
 <script>
 "use strict";
 const LS = "picker.v1";
 const $ = id => document.getElementById(id);
-const DEF_CFG = { search: "", list: "", max: 20, unc: "", chn: "", code: "([a-z]{2,6}-?\\d{2,5})", strip: "\\s*[-–|]\\s*YouTube.*$", kws: [], upd: 0 };
+const DEF_CFG = { search: "", list: "", max: 20, unc: "", chn: "", code: "([a-z]{2,6}-?\\d{2,5})", strip: "\\s*[-–|]\\s*YouTube.*$", thumb: "", favPats: [], stop: ["https", "http", "www", "com", "net", "org", "google", "youtube", "search", "搜尋"], kws: [], upd: 0 };
 let S = load();                       // {items:[], gone:{}, cfg:{}, sync:{repo,token,sha}, recent:[]}
 let undoFn = null, lastPick = null, manageMode = false, sel = new Set(), syncTimer = null, syncing = false;
 
@@ -173,9 +232,20 @@ const TIER_NAME = { 4: "無碼＋中文", 3: "無碼", 2: "中文", 1: "一般" 
 const keyOf = it => it.code || it.url;
 
 /* 加一筆：同番號已存在 → 留較好的版本，另一個記在 alt */
+/* 搜尋頁、女優頁這類網址（不是單一影片）→ 把裡面的名字／關鍵字存成「最愛」，不放進片單 */
+function favFromUrl(url) {
+  let u = url; try { u = decodeURIComponent(url); } catch (e) { /* 解不開就用原樣 */ }
+  for (const pat of S.cfg.favPats || []) {
+    const r = rx(pat), m = r && r.exec(u);
+    if (m && m[1]) return m[1].replace(/\+/g, " ").replace(/[?#].*$/, "").trim();
+  }
+  return "";
+}
+function addFav(k) { if (!k || S.cfg.kws.includes(k)) return false; S.cfg.kws.push(k); S.cfg.upd = Date.now(); return true; }
 function upsert(url, title) {
   url = (url || "").trim();
   if (!/^https?:\/\//i.test(url)) return "skip";
+  const fk = favFromUrl(url); if (fk) return addFav(fk) ? "fav" : "favdup";
   title = cleanTitle(title);
   const a = analyze(url, title), now = Date.now();
   const cur = S.items.find(x => (a.code && x.code === a.code) || x.url === url);
@@ -208,14 +278,14 @@ function parseBookmarks(html) {
   return out;
 }
 function addMany(pairs, hostOnly) {
-  const r = { new: 0, better: 0, dup: 0, upd: 0, skip: 0 };
+  const r = { new: 0, better: 0, dup: 0, upd: 0, skip: 0, fav: 0, favdup: 0 };
   for (const [u, t] of pairs) {
     if (hostOnly) { try { if (new URL(u).hostname.replace(/^www\./, "") !== hostOnly) { r.skip++; continue; } } catch (e) { r.skip++; continue; } }
     r[upsert(u, t)]++;
   }
   save(); renderAll(); return r;
 }
-function msgOf(r) { return `新增 ${r.new}、換成更好的版本 ${r.better}、重複略過 ${r.dup}` + (r.skip ? `、不是網址／別的網站略過 ${r.skip}` : ""); }
+function msgOf(r) { return `新增 ${r.new}、換成更好的版本 ${r.better}、重複略過 ${r.dup}` + (r.fav ? `、搜尋頁／女優頁轉成最愛 ${r.fav}` : "") + (r.skip ? `、不是網址／別的網站略過 ${r.skip}` : ""); }
 
 /* ───────── 合併重複（整份清單重新整理一次）───────── */
 function dedupeAll(apply) {
@@ -236,39 +306,46 @@ function dedupeAll(apply) {
 /* ───────── 關鍵字 ───────── */
 const STOP = new Set(["the", "and", "of", "a", "in", "to", "for", "on", "with", "x", "vs"]);
 function tokens(title) {
-  return (title || "").toLowerCase().split(/[\s\[\]()【】（）「」『』,，.。:：;；!！?？|\/\\\-_+#@~"'`]+/).filter(w => w.length >= 2 && !STOP.has(w) && !/^\d+$/.test(w));
+  return (title || "").toLowerCase().split(/[\s\[\]()【】（）「」『』,，.。:：;；!！?？|\/\\\-_+#@~"'`]+/).filter(w => w.length >= 2 && !STOP.has(w) && !/^\d+$/.test(w) && !(/^[a-z0-9]+$/.test(w) && w.length < 3));
 }
-function autoKws() {
-  const cnt = new Map(), c = rx(S.cfg.code);
-  for (const it of S.items) for (const w of new Set(tokens(it.title))) {
+/* 片名裡常出現的字 → 關鍵字候選。去掉：網站固定字樣（幾乎每部都有的字、設定裡的「不要當關鍵字」、網站名稱）、
+   別的網站的分頁（例：Google 搜尋頁）、番號、無碼／中文標記、太短的英文字 */
+function kwCounts() {
+  const c = rx(S.cfg.code), stop = new Set((S.cfg.stop || []).map(x => String(x).toLowerCase()));
+  let host = ""; try { host = new URL(S.cfg.search || S.cfg.list || "").hostname.replace(/^www\./, "").toLowerCase(); } catch (e) { host = ""; }
+  const pool = S.items.filter(it => { if (!host) return true; try { return new URL(it.url).hostname.replace(/^www\./, "").toLowerCase() === host; } catch (e) { return false; } });
+  const df = new Map();
+  for (const it of pool) for (const w of new Set(tokens(it.title))) {
     if (c && c.test(w) && w.replace(/-/g, "") === (it.code || "").replace(/-/g, "")) continue;
     if (it.code && w === it.code.split("-")[0]) continue;                       // 番號的字母部分（abc-123 的 abc）不當關鍵字
     if (rx(S.cfg.unc) && rx(S.cfg.unc).test(w) || rx(S.cfg.chn) && rx(S.cfg.chn).test(w)) continue;
-    cnt.set(w, (cnt.get(w) || 0) + 1);
+    if (stop.has(w) || (host && host.includes(w))) continue;
+    df.set(w, (df.get(w) || 0) + 1);
   }
-  return [...cnt].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 14);
+  const maxShare = pool.length >= 10 ? 0.25 : 1;                                // 超過四分之一的片名都有的字＝網站固定字樣
+  return [...df].filter(([, n]) => n >= 2 && n / pool.length <= maxShare).sort((a, b) => b[1] - a[1]);
 }
+function autoKws() { return kwCounts().slice(0, 14); }
 let active = new Set();
+let favEditMode = false;
 function renderChips() {
   const box = $("chips"); box.textContent = "";
-  const own = S.cfg.kws.map(k => [k, 0, true]);
-  const all = own.concat(autoKws().filter(([k]) => !S.cfg.kws.includes(k)).map(([k, n]) => [k, n, false]));
-  if (!all.length) { const d = document.createElement("span"); d.className = "mut small"; d.textContent = "（片單多了會自動長出按鈕；也可以在下面輸入女優名字或關鍵字後按「存成最愛」）"; box.appendChild(d); }
-  for (const [k, n, mine] of all) {
+  const favs = S.cfg.kws;
+  if (!favs.length) { const d = document.createElement("span"); d.className = "mut small"; d.textContent = "還沒有最愛。在下面「➕ 加入」輸入女優名字或關鍵字，就會出現在這裡。"; box.appendChild(d); }
+  for (const k of favs) {
     const c = document.createElement("span"); c.className = "chip" + (active.has(k) ? " on" : "");
-    c.textContent = (mine ? "⭐ " : "") + k; if (n) { const s = document.createElement("span"); s.className = "n"; s.textContent = n; c.appendChild(s); }
-    c.onclick = () => { active.has(k) ? active.delete(k) : active.add(k); renderChips(); };
-    if (mine) { c.title = "長按移除這個按鈕"; let t; c.onpointerdown = () => { t = setTimeout(() => { S.cfg.kws = S.cfg.kws.filter(x => x !== k); S.cfg.upd = Date.now(); active.delete(k); save(); renderChips(); toast("已移除按鈕「" + k + "」"); }, 700); }; c.onpointerup = c.onpointerleave = () => clearTimeout(t); }
+    c.textContent = "⭐ " + k;
+    if (favEditMode) {
+      const x = document.createElement("span"); x.className = "x2"; x.textContent = "✕"; c.appendChild(x);
+      c.onclick = () => { S.cfg.kws = S.cfg.kws.filter(z => z !== k); S.cfg.upd = Date.now(); active.delete(k); save(); renderChips(); setUndo(`已移除最愛「${k}」`, () => { addFav(k); save(); renderChips(); }); };
+    } else c.onclick = () => { active.has(k) ? active.delete(k) : active.add(k); renderChips(); };
     box.appendChild(c);
   }
+  $("favEdit").textContent = favEditMode ? "完成" : "編輯";
 }
+$("favEdit").onclick = () => { favEditMode = !favEditMode; renderChips(); };
+$("favSug").onclick = () => { const b = $("sugbox"); const on = b.style.display === "none"; b.style.display = on ? "block" : "none"; if (on) renderSugg(); };
 const terms = () => [...active, ...$("kw").value.split(/[\s,，]+/).filter(Boolean)].map(s => s.toLowerCase());
-$("kwSave").onclick = () => {
-  const ks = $("kw").value.split(/[\s,，]+/).filter(Boolean); if (!ks.length) return toast("先在左邊輸入關鍵字");
-  for (const k of ks) if (!S.cfg.kws.includes(k)) S.cfg.kws.push(k);
-  S.cfg.upd = Date.now(); $("kw").value = ""; save(); renderChips();
-};
-
 /* ───────── 抽 ───────── */
 function pickMine() {
   const ts = terms();
@@ -282,15 +359,23 @@ function pickMine() {
 }
 function showPick(it, poolN) {
   const d = document.createElement("div"); d.className = "card pick";
-  const meta = document.createElement("div"); meta.className = "mut small";
-  const t = document.createElement("span"); t.className = "tier t" + it.tier; t.textContent = TIER_NAME[it.tier]; meta.appendChild(t);
-  meta.appendChild(document.createTextNode((it.code ? it.code.toUpperCase() + "　" : "") + `（符合的共 ${poolN} 部）` + (it.alt && it.alt.length ? `　另有 ${it.alt.length} 個版本` : "")));
+  const ph = document.createElement("a"); ph.className = "ph"; ph.href = it.url; ph.target = "_blank"; ph.rel = "noopener"; ph.appendChild(thumbEl(it, false));
+  const bd = document.createElement("span"); bd.className = "bd t" + it.tier; bd.textContent = TIER_NAME[it.tier]; ph.appendChild(bd);
+  if (it.code) { const cd = document.createElement("div"); cd.className = "cd"; cd.textContent = it.code.toUpperCase(); ph.appendChild(cd); }
+  const info = document.createElement("div"); info.className = "info";
   const h = document.createElement("div"); h.className = "t"; h.textContent = it.title;
-  const row = document.createElement("div"); row.className = "row";
-  const open = document.createElement("a"); open.className = "btn pri"; open.href = it.url; open.target = "_blank"; open.rel = "noopener"; open.style.cssText = "text-align:center;text-decoration:none;color:#fff;background:var(--ac);font-weight:700"; open.textContent = "▶ 開啟";
-  const no = document.createElement("button"); no.textContent = "👎 不要"; no.onclick = () => { removeItem(it, true); pickMine(); };
+  const sub = document.createElement("div"); sub.className = "sub"; sub.textContent = `符合的共 ${poolN} 部` + (it.alt && it.alt.length ? `　另有 ${it.alt.length} 個版本` : "");
+  const row = document.createElement("div"); row.className = "acts";
+  const open = document.createElement("a"); open.className = "btn go"; open.href = it.url; open.target = "_blank"; open.rel = "noopener"; open.textContent = "▶ 開啟";
   const again = document.createElement("button"); again.textContent = "🔁 再抽"; again.onclick = pickMine;
-  row.append(open, no, again); d.append(meta, h, row); show(d);
+  const no = document.createElement("button"); no.textContent = "👎 不要"; no.onclick = () => { removeItem(it, true); pickMine(); };
+  row.append(open, again, no); info.append(h, sub, row); d.append(ph, info); show(d);
+}
+function showIdle() {
+  const d = document.createElement("div"); d.className = "idle";
+  const b = document.createElement("div"); b.className = "big"; b.textContent = "🎲";
+  d.append(b, document.createTextNode(S.items.length ? "按下面的按鈕，抽一部" : "片單是空的，往下找「➕ 加入」貼網址"));
+  show(d);
 }
 function card(t, s) { const d = document.createElement("div"); d.className = "card"; d.textContent = t + "　" + s; return d; }
 function show(node) { const r = $("result"); r.textContent = ""; r.appendChild(node); }
@@ -309,14 +394,19 @@ function pickWeb(given, tag) {
   if (!tpl) return show(card("還沒設定全站隨機的網址", "到「⚙ 設定」填搜尋網址（或沒挑關鍵字時用的網址）。"));
   const url = tpl.replace("{kw}", encodeURIComponent(ts.join(" "))).replace("{page}", page);
   const d = document.createElement("div"); d.className = "card pick";
-  const h = document.createElement("div"); h.className = "t"; h.textContent = ts.length ? `${tag || "全站隨機"}：${ts.join("、")}（第 ${page} 頁）` : `全站隨機（第 ${page} 頁）`;
-  const hint = document.createElement("div"); hint.className = "mut small"; hint.textContent = "會開新分頁到那一頁，從裡面挑；看到喜歡的，用書籤「➕片單」加回來。那頁是空的就再按一次。";
-  const row = document.createElement("div"); row.className = "row"; row.style.marginTop = "8px";
-  const open = document.createElement("a"); open.className = "btn"; open.href = url; open.target = "_blank"; open.rel = "noopener"; open.style.cssText = "text-align:center;text-decoration:none;color:#fff;background:var(--ac);font-weight:700"; open.textContent = "▶ 開啟";
+  const ph = document.createElement("a"); ph.className = "ph"; ph.href = url; ph.target = "_blank"; ph.rel = "noopener";
+  const nm = document.createElement("div"); nm.className = "noimg"; nm.textContent = ts.length ? ts.join("、") : "全站隨機"; ph.appendChild(nm);
+  const bd = document.createElement("span"); bd.className = "bd"; bd.textContent = tag || "🌐 全站"; ph.appendChild(bd);
+  const cd = document.createElement("div"); cd.className = "cd"; cd.textContent = `第 ${page} 頁`; ph.appendChild(cd);
+  const info = document.createElement("div"); info.className = "info";
+  const h = document.createElement("div"); h.className = "t"; h.textContent = ts.length ? `${tag || "全站隨機"}：${ts.join("、")}` : "全站隨機";
+  const sub = document.createElement("div"); sub.className = "sub"; sub.textContent = "會開到網站那一頁，從裡面挑；看到喜歡的，用書籤「➕片單」加回來。那頁是空的就再按一次。";
+  const row = document.createElement("div"); row.className = "acts";
+  const open = document.createElement("a"); open.className = "btn go"; open.href = url; open.target = "_blank"; open.rel = "noopener"; open.textContent = "▶ 開啟";
   const again = document.createElement("button"); again.textContent = "🔁 換一頁"; again.onclick = () => pickWeb(given, tag);
   row.append(open, again);
-  if (tag) { const nx = document.createElement("button"); nx.textContent = "⭐ 換一個最愛"; nx.onclick = pickFav; row.append(nx); }
-  d.append(h, hint, row); show(d);
+  if (tag) { const nx = document.createElement("button"); nx.textContent = "⭐ 換一個"; nx.onclick = pickFav; row.append(nx); } else { const sp = document.createElement("button"); sp.textContent = "🎲 換方式"; sp.onclick = () => $("rndMine").click(); row.append(sp); }
+  info.append(h, sub, row); d.append(ph, info); show(d);
   try { window.open(url, "_blank", "noopener"); } catch (e) { /* 被擋就靠上面的按鈕 */ }
 }
 $("rndMine").onclick = pickMine; $("rndWeb").onclick = () => pickWeb(); $("rndFav").onclick = pickFav;
@@ -327,11 +417,43 @@ function removeItem(it, quiet) {
   S.items.splice(i, 1); S.gone[keyOf(it)] = Date.now(); save(); renderAll();
   setUndo(`已移除「${it.title.slice(0, 24)}」`, () => { S.items.splice(Math.min(i, S.items.length), 0, it); delete S.gone[keyOf(it)]; it.upd = Date.now(); save(); renderAll(); });
 }
+/* 縮圖：網址樣式放在設定（{code}＝番號）。referrerpolicy=no-referrer：不送來源網址，不然圖片網站會擋「從別的網頁引用」 */
+function thumbUrl(it) { const t = S.cfg.thumb; return t && it.code ? t.replace("{code}", it.code) : ""; }
+function thumbEl(it, lazy) {
+  const u = thumbUrl(it);
+  const none = () => { const d = document.createElement("div"); d.className = "noimg"; d.textContent = it.code ? it.code.toUpperCase() : "無縮圖"; return d; };
+  if (!u) return none();
+  const im = document.createElement("img"); im.referrerPolicy = "no-referrer"; if (lazy) im.loading = "lazy"; im.alt = ""; im.src = u;
+  im.onerror = () => { im.replaceWith(none()); };
+  return im;
+}
+let view = "m"; try { view = localStorage.getItem("picker.view") || "m"; } catch (e) { /* 沒存到就用中圖 */ }
+document.querySelectorAll("#views button").forEach(b => b.onclick = () => { view = b.dataset.v; try { localStorage.setItem("picker.view", view); } catch (e) { /* 忽略 */ } renderList(); });
+function renderTiles(items, box) {
+  const g = document.createElement("div"); g.className = "grid " + view;
+  for (const it of items.slice(0, 300)) {
+    const t = document.createElement("div"); t.className = "tile";
+    const ph = document.createElement("a"); ph.className = "ph"; ph.href = it.url; ph.target = "_blank"; ph.rel = "noopener"; ph.appendChild(thumbEl(it, true));
+    const tg = document.createElement("span"); tg.className = "tg t" + it.tier; tg.textContent = TIER_NAME[it.tier]; ph.appendChild(tg);
+    const cap = document.createElement("a"); cap.className = "cap"; cap.href = it.url; cap.target = "_blank"; cap.rel = "noopener"; cap.textContent = it.title; cap.title = it.title;
+    t.append(ph, cap);
+    if (manageMode) { const cb = document.createElement("input"); cb.type = "checkbox"; cb.className = "ck"; cb.checked = sel.has(it); cb.onchange = () => cb.checked ? sel.add(it) : sel.delete(it); t.appendChild(cb); }
+    else { const x = document.createElement("button"); x.className = "rm"; x.textContent = "✕"; x.title = "移除"; x.onclick = () => removeItem(it); t.appendChild(x); }
+    g.appendChild(t);
+  }
+  box.appendChild(g);
+}
 function renderList() {
   const q = $("q").value.trim().toLowerCase(), box = $("list"); box.textContent = "";
   const items = S.items.slice().sort((a, b) => b.added - a.added).filter(it => !q || (it.title + " " + it.code).toLowerCase().includes(q));
   $("count").textContent = `共 ${S.items.length} 部` + (q ? `，符合 ${items.length}` : "");
   $("bulk").style.display = manageMode ? "flex" : "none"; $("manage").textContent = manageMode ? "完成" : "整理";
+  document.querySelectorAll("#views button").forEach(b => b.classList.toggle("on", b.dataset.v === view));
+  if (view !== "list") {
+    renderTiles(items, box);
+    if (items.length > 300) { const d = document.createElement("div"); d.className = "mut"; d.style.marginTop = "8px"; d.textContent = "只顯示前 300 筆，用上面搜尋縮小範圍。"; box.appendChild(d); }
+    return;
+  }
   for (const it of items.slice(0, 300)) {
     const row = document.createElement("div"); row.className = "item";
     if (manageMode) { const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = sel.has(it); cb.onchange = () => cb.checked ? sel.add(it) : sel.delete(it); row.appendChild(cb); }
@@ -358,7 +480,14 @@ $("delSel").onclick = () => {
 
 /* ───────── 加入 ───────── */
 $("doAdd").onclick = () => {
-  const pairs = parsePaste($("paste").value); if (!pairs.length) return $("addMsg").textContent = "沒看到網址。";
+  const txt = $("paste").value.trim(); if (!txt) return $("addMsg").textContent = "先貼網址，或輸入女優名字／關鍵字。";
+  if (!/https?:\/\//i.test(txt)) {                       // 沒有網址 → 當成最愛（逗號、頓號、換行分開）
+    const names = txt.split(/[\n,，、;；]+/).map(x => x.trim()).filter(Boolean);
+    let n = 0; for (const k of names) if (addFav(k)) n++;
+    if (n) save(); renderAll(); $("paste").value = "";
+    return $("addMsg").textContent = n ? `⭐ 已加進最愛 ${n} 個：${names.join("、")}` : "這些最愛都已經有了。";
+  }
+  const pairs = parsePaste(txt); if (!pairs.length) return $("addMsg").textContent = "沒看到網址。";
   const r = addMany(pairs); $("addMsg").textContent = msgOf(r); $("paste").value = "";
 };
 $("doFile").onclick = () => $("file").click();
@@ -370,6 +499,28 @@ $("file").onchange = async e => {
   const onlyHost = host && pairs.filter(p => { try { return new URL(p[0]).hostname.replace(/^www\./, "") === host; } catch (e2) { return false; } }).length ? host : "";
   const r = addMany(pairs, onlyHost); $("addMsg").textContent = (onlyHost ? `只收 ${onlyHost} 的。` : "") + msgOf(r);
 };
+function suggestions() { return kwCounts().filter(([w]) => !S.cfg.kws.includes(w)).slice(0, 40); }
+function renderSugg() {
+  const box = $("sugg"); box.textContent = "";
+  const list = suggestions();
+  if (!list.length) { const d = document.createElement("span"); d.className = "mut small"; d.textContent = "（目前沒有重複出現的名字或關鍵字）"; box.appendChild(d); return; }
+  for (const [w, n] of list) {
+    const c = document.createElement("span"); c.className = "chip"; c.textContent = w;
+    const s2 = document.createElement("span"); s2.className = "n"; s2.textContent = n; c.appendChild(s2);
+    c.onclick = () => { if (addFav(w)) { save(); renderChips(); } c.remove(); };
+    box.appendChild(c);
+  }
+}
+$("tidy").onclick = () => {
+  const prevKws = S.cfg.kws.slice(), prevItems = S.items.slice(), keep = [], moved = [];
+  for (const it of S.items) { const fk = favFromUrl(it.url); if (fk) { moved.push(it); addFav(fk); } else keep.push(it); }
+  if (moved.length) {
+    S.items = keep; moved.forEach(i => { S.gone[keyOf(i)] = Date.now(); }); save(); renderAll();
+    setUndo(`已把 ${moved.length} 筆搜尋頁／女優頁轉成最愛`, () => { S.items = prevItems; S.cfg.kws = prevKws; S.cfg.upd = Date.now(); moved.forEach(i => { delete S.gone[keyOf(i)]; i.upd = Date.now(); }); save(); renderAll(); renderSugg(); });
+  }
+  $("tidyMsg").textContent = moved.length ? `已轉換 ${moved.length} 筆搜尋頁／女優頁成最愛（可按「復原」）。` : (S.cfg.favPats && S.cfg.favPats.length ? "片單裡沒有搜尋頁或女優頁。" : "還沒設定搜尋頁／女優頁的網址樣式（到「⚙ 設定」填）。") + "　下面是片名裡常出現的名字，點一下加進最愛。";
+  renderSugg();
+};
 $("dedupe").onclick = () => { const n = dedupeAll(true); $("dedupeMsg").textContent = n ? `合併了 ${n} 筆重複（每部只留最好的版本，其他版本記在「另有 N 個版本」）。` : "沒有重複的。"; };
 
 /* 從網址進來的加入：書籤小工具（?add=網址&title=標題）、手機分享（?url=&text=&title=） */
@@ -378,7 +529,7 @@ function handleIncoming() {
   const url = p.get("add") || p.get("url") || (p.get("text") || "").match(/https?:\/\/\S+/)?.[0];
   if (!url) return;
   const r = upsert(url, p.get("title") || (p.get("text") || "").replace(url, "")); save(); history.replaceState(null, "", location.pathname);
-  const msg = { new: "✅ 已加入片單", better: "✅ 已換成更好的版本", dup: "已經在片單裡了", upd: "已更新標題", skip: "這不是網址" }[r];
+  const msg = { new: "✅ 已加入片單", better: "✅ 已換成更好的版本", dup: "已經在片單裡了", upd: "已更新標題", skip: "這不是網址", fav: "⭐ 已加進最愛", favdup: "這個最愛已經有了" }[r];
   setTimeout(() => toast(msg), 300);
 }
 function bmHref() {
@@ -388,12 +539,12 @@ function bmHref() {
 
 /* ───────── 設定、備份 ───────── */
 function fillSettings() {
-  const c = S.cfg; $("cSearch").value = c.search; $("cList").value = c.list; $("cMax").value = c.max; $("cUnc").value = c.unc; $("cChn").value = c.chn; $("cCode").value = c.code; $("cStrip").value = c.strip || ""; $("cFavs").value = (c.kws || []).join("\n");
+  const c = S.cfg; $("cSearch").value = c.search; $("cList").value = c.list; $("cMax").value = c.max; $("cUnc").value = c.unc; $("cChn").value = c.chn; $("cCode").value = c.code; $("cStrip").value = c.strip || ""; $("cThumb").value = c.thumb || ""; $("cStop").value = (c.stop || []).join("\n"); $("cFavPats").value = (c.favPats || []).join("\n"); $("cFavs").value = (c.kws || []).join("\n");
   $("sRepo").value = S.sync.repo || ""; $("sTok").value = S.sync.token || "";
 }
 $("cSave").onclick = () => {
   const c = S.cfg; c.search = $("cSearch").value.trim(); c.list = $("cList").value.trim(); c.max = Math.max(1, parseInt($("cMax").value) || 20);
-  c.unc = $("cUnc").value.trim(); c.chn = $("cChn").value.trim(); c.code = $("cCode").value.trim() || DEF_CFG.code; c.strip = $("cStrip").value.trim(); c.kws = [...new Set($("cFavs").value.split(/\r?\n/).map(x => x.trim()).filter(Boolean))]; c.upd = Date.now();
+  c.unc = $("cUnc").value.trim(); c.chn = $("cChn").value.trim(); c.code = $("cCode").value.trim() || DEF_CFG.code; c.strip = $("cStrip").value.trim(); c.thumb = $("cThumb").value.trim(); c.stop = [...new Set($("cStop").value.split(/\r?\n/).map(x => x.trim().toLowerCase()).filter(Boolean))]; c.favPats = $("cFavPats").value.split(/\r?\n/).map(x => x.trim()).filter(x => x && rx(x)); c.kws = [...new Set($("cFavs").value.split(/\r?\n/).map(x => x.trim()).filter(Boolean))]; c.upd = Date.now();
   for (const k of ["unc", "chn", "code", "strip"]) if (c[k] && !rx(c[k])) { c[k] = DEF_CFG[k]; toast("規則格式不對，已還原預設：" + k); }
   reanalyze();
   save(); renderAll(); toast("已儲存");
@@ -456,14 +607,12 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) sync
 function toast(m) { $("tmsg").textContent = m; $("tundo").style.display = "none"; $("toast").classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => $("toast").classList.remove("on"), 3000); }
 function setUndo(m, fn) { undoFn = fn; $("tmsg").textContent = m; $("tundo").style.display = ""; $("toast").classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => { $("toast").classList.remove("on"); undoFn = null; }, 7000); }
 $("tundo").onclick = () => { if (undoFn) undoFn(); undoFn = null; $("toast").classList.remove("on"); };
-document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
-  document.querySelectorAll(".tabs button,.pane").forEach(x => x.classList.remove("on"));
-  b.classList.add("on"); $("p-" + b.dataset.p).classList.add("on"); if (b.dataset.p === "set") fillSettings();
-});
+$("btnSet").onclick = () => { fillSettings(); $("p-set").classList.add("on"); document.body.style.overflow = "hidden"; };
+$("setClose").onclick = () => { $("p-set").classList.remove("on"); document.body.style.overflow = ""; };
 function renderAll() { renderChips(); renderList(); }
 $("bm").href = bmHref();
 $("bm").onclick = e => { e.preventDefault(); toast("請拖到書籤列（手機：長按複製網址，再建立書籤貼上）"); };
-renderAll(); handleIncoming(); fillSettings();
+renderAll(); showIdle(); handleIncoming(); fillSettings();
 if (S.sync.token) sync();
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
 </script>
