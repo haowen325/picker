@@ -180,7 +180,7 @@ details.more{margin-top:10px}details.more summary{cursor:pointer;color:var(--mut
 <!-- 抽：選範圍（片單／影片庫可複選）＋ 下面點選女優／關鍵字／條件（可複選）→ 按「抽」 -->
 <div class="card drawcard">
   <div class="small mut" style="margin-bottom:6px">從哪裡抽（可複選）</div>
-  <div class="chips" id="srcchips"><span class="chip" data-s="list">📋 我的片單</span><span class="chip" data-s="lib">📚 影片庫</span></div>
+  <div class="chips" id="srcchips"><span class="chip" data-s="list">📋 我的片單</span><span class="chip" data-s="lib">📚 影片庫</span><span class="chip" data-s="live">🌐 線上即時抽</span></div>
   <div class="modehint" id="modehint"></div>
   <div class="small mut" id="libinfo" style="margin:-4px 2px 8px"></div>
   <div class="small" id="collectStat" style="display:none;margin:0 2px 10px;padding:8px 10px;border-radius:10px;background:#1d1d24"></div>
@@ -438,7 +438,7 @@ function poolList() {
     return { label, tpl, max: +body[1] > 0 ? +body[1] : 0 };
   }).filter(e => e.tpl);
 }
-const SRC = { list: true, lib: true };      // 從哪裡抽：片單／影片庫（可複選）
+const SRC = { list: true, lib: true, live: false };      // 從哪裡抽：片單／影片庫（可複選）
 try { Object.assign(SRC, JSON.parse(localStorage.getItem("picker.src") || "{}")); } catch (e) { /* 沒存到就都開 */ }
 try { addTgt = localStorage.getItem("picker.tgt") || "act"; } catch (e) { /* 沒存到就用女優 */ }
 /* 女優照片：①自己設的照片網址（或書籤在她的頁面抓回來的）②片單裡她的片的封面 ③名字第一個字 */
@@ -496,9 +496,9 @@ function renderMode() {
   document.querySelectorAll("#srcchips .chip").forEach(c => c.classList.toggle("on", !!SRC[c.dataset.s]));
   document.querySelectorAll("#addTarget button").forEach(x => x.classList.toggle("on", x.dataset.t === addTgt));
   const nA = [...active].filter(k => S.cfg.kws.includes(k)).length, nW = activeW.size, nC = activeC.size, tmp = tempRaw().length;
-  const where = [SRC.list ? `片單 ${S.items.length} 部` : "", SRC.lib ? `影片庫 ${candList().length} 部` : ""].filter(Boolean).join(" ＋ ");
+  const where = SRC.live ? "" : [SRC.list ? `片單 ${S.items.length} 部` : "", SRC.lib ? `影片庫 ${candList().length} 部` : ""].filter(Boolean).join(" ＋ ");
   const sel = [nA ? `${nA} 位女優（任一位）` : "", nW + tmp ? `${nW + tmp} 個關鍵字（要同時符合）` : "", nC ? `${nC} 個條件（任一個）` : ""].filter(Boolean);
-  $("modehint").textContent = (where ? `從 ${where} 裡隨機抽 ${pickN()} 部。` : "請至少選一個「從哪裡抽」。") + (sel.length ? `只要符合：${sel.join("、")}。` : "沒點選女優／關鍵字＝不限。");
+  $("modehint").textContent = SRC.live ? `🌐 線上即時抽：按「抽」會開網站分頁，現抓你點選的${sel.length ? "" : "（沒點選就隨機 2 個網站分類）"}隨機幾頁，直接抽 ${pickN()} 部（不用先採集，抓到的也會存進影片庫；只選這個時不看片單／影片庫）。` + (collectorOn() ? "" : "⚠ 要先有自動採集腳本。") : (where ? `從 ${where} 裡隨機抽 ${pickN()} 部。` : "請至少選一個「從哪裡抽」。") + (sel.length ? `只要符合：${sel.join("、")}。` : "沒點選女優／關鍵字＝不限。");
   $("fab").textContent = sel.length ? `🎲 抽（${nA + nW + nC + tmp}）` : "🎲 抽";
 }
 document.querySelectorAll("#srcchips .chip").forEach(c => c.onclick = () => { SRC[c.dataset.s] = !SRC[c.dataset.s]; try { localStorage.setItem("picker.src", JSON.stringify(SRC)); } catch (e) { /* 忽略 */ } renderMode(); });
@@ -552,7 +552,9 @@ function makeTile(it, ctx) {
   again.onclick = () => { const n = ctx.next(keyOf(it)); if (n) t.replaceWith(n); else toast("沒有別的可抽了"); };
   no.onclick = () => { removeItem(it, true); const n = ctx.next(keyOf(it)); if (n) t.replaceWith(n); else t.remove(); };
   row.append(open, again, no);
-  t.append(ph, title); if (meta) t.appendChild(el("div", "rtm", meta)); t.appendChild(row);
+  t.append(ph, title); if (meta) t.appendChild(el("div", "rtm", meta));
+  if (it.code) { const fv = el("button", "sm ghost", "🔎 找其他版本"); fv.style.cssText = "margin:4px 10px 0;width:calc(100% - 20px)"; fv.onclick = () => probeVariants(it.code, t, ctx); t.appendChild(fv); }
+  t.appendChild(row);
   return t;
 }
 /* ───────── 影片庫（採集）：女優／關鍵字／條件抽到的是「真正的影片」，不是網站的分頁 ─────────
@@ -658,7 +660,13 @@ const collectorOn = () => document.documentElement.dataset.pickerCollector === "
 /* 採集狀態：開了採集分頁 → 顯示「進行中＋已經幾秒」；收到結果 → 顯示收到幾部；太久沒回 → 明講沒收到 */
 let collectWait = null, collectTick = null, redrawOnCollect = false;
 function lastCollect() { try { return JSON.parse(localStorage.getItem("picker.lastCollect") || "null"); } catch (e) { return null; } }
-function setCollectStat(html, cls) { const b = $("collectStat"); if (!html) { b.style.display = "none"; return; } b.style.display = "block"; b.textContent = html; b.style.color = cls === "err" ? "#ff9a9a" : cls === "ok" ? "#8bd48f" : "#f2f2f2"; }
+let statHide = null;
+function setCollectStat(html, cls) {                  // 固定貼在畫面最上方（捲到哪都看得到）；點一下可關閉，完成的 15 秒後自動收起
+  const b = $("collectStat"); clearTimeout(statHide); if (!html) { b.style.display = "none"; return; }
+  b.style.cssText = "display:block;position:fixed;left:12px;right:12px;top:10px;z-index:30;padding:12px 14px;border-radius:12px;background:#1d1d24;border:1px solid #ffffff22;box-shadow:0 6px 24px #000c;font-size:14px;line-height:1.5;margin:0;color:" + (cls === "err" ? "#ff9a9a" : cls === "ok" ? "#8bd48f" : "#f2f2f2");
+  b.textContent = html + "　（點一下關閉）"; b.onclick = () => { b.style.display = "none"; };
+  if (cls === "ok") statHide = setTimeout(() => { b.style.display = "none"; }, 15000);
+}
 function startCollectWatch(auto) {
   collectWait = { t: Date.now(), auto }; clearInterval(collectTick);
   const tick = () => {
@@ -675,9 +683,9 @@ function collectDone(n, total, st) {
   setCollectStat(`✅ 採集完成 ${new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })}：這次抓到 ${total} 部，新增 ${n} 部（影片庫共 ${candList().length} 部）${st ? "｜" + st : ""}`, total ? "ok" : "err");
   if (redrawOnCollect) { redrawOnCollect = false; pickAny(); }
 }
-function openCollect(names, conds) {
+function openCollect(names, conds, live, probe) {
   const o = siteOrigin(); if (!o) { toast("先到 ⚙ 設定網站網址（搜尋網址）"); return null; }
-  const plan = { a: collectorOn() ? 1 : 0, search: S.cfg.search, names, conds: conds.map(e => ({ l: e.label, t: e.tpl, m: e.max || +S.cfg.max || 20 })), K: Math.min(60, Math.max(1, +S.cfg.crawlMax || 30)) };
+  const plan = { a: collectorOn() ? 1 : 0, live: live ? 1 : 0, probe: probe || null, search: S.cfg.search, names, conds: conds.map(e => ({ l: e.label, t: e.tpl, m: e.max || +S.cfg.max || 20 })), K: live ? 3 : Math.min(60, Math.max(1, +S.cfg.crawlMax || 30)) };
   const enc = btoa(unescape(encodeURIComponent(JSON.stringify(plan)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   const w = window.open(o + "/#picker=" + enc, "_blank");
   if (!w) { toast("瀏覽器擋了彈出視窗：網址列右邊點「已封鎖彈出視窗」→ 一律允許，再按一次"); return null; }
@@ -712,12 +720,15 @@ function mergeCand(list) {
     if (!cur) { const nv = { c, t: String(x.t || c).slice(0, 120), u: String(x.u), b: x.b ? String(x.b) : "", s: src, upd: now, alt: [] }; addVars(nv, x.alt || []); map.set(c, nv); add++; }
     else { for (const k of src) if (!cur.s.includes(k)) cur.s.push(k); if (x.b && !cur.b) cur.b = String(x.b); addVars(cur, [{ u: x.u, t: x.t }, ...(x.alt || [])]); cur.upd = now; }
   }
-  S.cand = [...map.values()].sort((a, b) => (b.upd || 0) - (a.upd || 0)).slice(0, 4000);
+  S.cand = [...map.values()].sort((a, b) => (b.upd || 0) - (a.upd || 0)).slice(0, 8000);
   return add;
 }
 function renderLib() {
   const n = candList().length;
   const li = $("libinfo"); li.textContent = n ? `📚 影片庫 ${n} 部（最愛／全站從這裡抽）　` : "📚 影片庫還是空的：最愛／全站要先採集才抽得到影片。";
+  const cnt = {}; for (const v of candList()) for (const x of v.s || []) cnt[x] = (cnt[x] || 0) + 1;
+  const per = S.cfg.kws.filter(k => cnt[k]).map(k => `${k} ${cnt[k]}`);
+  if (per.length) li.appendChild(document.createTextNode(`（${per.join("、")}）　`));
   const have = new Set(); for (const v of candList()) for (const x of v.s || []) have.add(x);
   const fresh = S.cfg.kws.filter(k => !have.has(k));                     // 還沒採集過的女優（例如在手機上加的）
   if (fresh.length) li.appendChild(document.createTextNode(`⚠ ${fresh.length} 位還沒採集：${fresh.slice(0, 3).join("、")}${fresh.length > 3 ? "…" : ""}　`));
@@ -753,7 +764,9 @@ function vidTile(v, ctx) {
   again.onclick = () => { const n = ctx.next(v.c); if (n) t.replaceWith(n); else toast("沒有別的可抽了"); };
   no.onclick = () => { S.cgone[v.c] = Date.now(); S.cand = candList().filter(x => x.c !== v.c); save(); renderLib(); const n = ctx.next(v.c); if (n) t.replaceWith(n); else t.remove(); };
   row.append(open, add, again, no);
-  t.append(ph, title); if (meta) t.appendChild(el("div", "rtm", meta)); t.appendChild(row);
+  t.append(ph, title); if (meta) t.appendChild(el("div", "rtm", meta));
+  const fv = el("button", "sm ghost", "🔎 找其他版本（無碼／中文）"); fv.style.cssText = "margin:4px 10px 0;width:calc(100% - 20px)"; fv.onclick = () => probeVariants(v.c, t, ctx); t.appendChild(fv);
+  t.appendChild(row);
   return t;
 }
 /* 抽：範圍＝片單／影片庫（可複選）；女優＝任一位、關鍵字＝要同時符合、條件＝任一個（只對影片庫）；三類之間要同時成立 */
@@ -766,7 +779,40 @@ function mixCtx(pool, shown) {
   } };
   return ctx;
 }
+/* 🌐 線上即時抽：請採集腳本現抓女優／關鍵字／條件的隨機幾頁，抓回來就直接抽（見 window message 的 live 分支） */
+function pickLive() {
+  if (!collectorOn()) return show(card("線上即時抽需要「自動採集腳本」", "沒偵測到 Tampermonkey 的「片單小工具 自動採集」。請用一般視窗開工具（無痕預設不執行擴充功能），並確認腳本已啟用。"));
+  const acts = [...active].filter(k => S.cfg.kws.includes(k)), kws = [...activeW, ...tempRaw()], conds = poolList().filter(e => activeC.has(e.label));
+  const queries = acts.length ? acts.map(a => [a, ...kws].join(" ")) : kws.length ? [kws.join(" ")] : [];
+  const cs = !queries.length && !conds.length ? sample(poolList(), 2) : conds;
+  if (!queries.length && !cs.length) return show(card("沒有可抽的來源", "先點選女優或關鍵字，或到 ⚙ 設定網站分類。"));
+  show(card("⏳ 線上抽中…", "已開網站分頁現抓，抓完會自動關閉並在這裡顯示結果。"));
+  redrawOnCollect = false; openCollect(queries, cs, true);
+}
+/* 🔎 找其他版本：請採集腳本直接到網站查這個番號有沒有 無碼／中文 版（搜尋頁常常不會列出來） */
+let probeWait = null;
+function probeVariants(code, tile, ctx) {
+  if (!collectorOn()) return toast("要先有自動採集腳本才能找其他版本（Tampermonkey）");
+  if (!code) return toast("這一部沒有番號，沒辦法找");
+  probeWait = { code: code.toLowerCase(), tile, ctx };
+  if (openCollect([], [], false, [code.toLowerCase()])) setCollectStat(`⏳ 到網站查「${code.toUpperCase()}」有沒有無碼／中文版…（網站分頁會自己關）`, "");
+}
+function handleProbe(p) {
+  const tgt = probeWait; probeWait = null; collectWait = null; clearInterval(collectTick);
+  mergeCand(p.v || []); save(); renderAll();
+  const found = (p.v || []).reduce((a, v) => a + 1 + (v.alt || []).length, 0);
+  setCollectStat(found ? `✅ 找到 ${found} 個版本，已挑最好的` : "⚠ 網站上沒找到其他版本（試過：一般、無碼、中文的常見網址；可能這部真的只有一個版本，或網站網址規則不同）", found ? "ok" : "err");
+  if (tgt && tgt.tile.isConnected) { const v = candList().find(c => c.c === tgt.code); if (v) tgt.tile.replaceWith(vidTile(v, tgt.ctx)); }
+}
+function liveDraw(vs) {
+  const entries = [], seen = new Set(), lib = new Map(candList().map(c => [c.c, c]));
+  for (const x of vs) { const v = lib.get(x.c) || x; if (!v || !v.c || seen.has(v.c) || S.cgone[v.c]) continue; seen.add(v.c); entries.push({ kind: "vid", v, key: v.c, tier: bestVar(v).tier }); }
+  if (!entries.length) return show(card("線上沒抓到影片", "網站沒有符合的結果，或網站版面變了／要你按「我不是機器人」。"));
+  const picks = sample(entries, pickN()), ctx = mixCtx(entries, new Set(picks.map(e => e.key)));
+  showGrid(picks.map(e => mixTile(e, ctx)), `🌐 線上現抓的 ${entries.length} 部裡隨機挑（已存進影片庫）。`);
+}
 function pickAny() {
+  if (SRC.live) return pickLive();
   if (!SRC.list && !SRC.lib) return show(card("先選「從哪裡抽」", "上面點「📋 我的片單」或「📚 影片庫」（可以兩個都選）。"));
   const acts = [...active].filter(k => S.cfg.kws.includes(k)), kws = [...activeW, ...tempRaw()], conds = poolList().filter(e => activeC.has(e.label));
   const la = acts.map(x => x.toLowerCase()), lk = kws.map(x => x.toLowerCase()), lc = conds.map(e => e.label.toLowerCase());
@@ -928,14 +974,17 @@ function applySetup(b64) {
 }
 window.addEventListener("message", e => {                    // 採集小腳本（同一個分頁、同網域）送回的影片＋女優照片
   const d = e.data; if (!d || !d.pickerCollect || e.source !== window || e.origin !== location.origin) return;
-  const p = d.payload || {}, n = mergeCand(p.v || []); let ph = 0;
+  const p = d.payload || {}; if (p.probe) return handleProbe(p);
+  const n = mergeCand(p.v || []); let ph = 0;
   S.cfg.favImg = Object.assign({}, S.cfg.favImg || {});
   for (const [name, url] of Object.entries(p.photos || {})) if (S.cfg.kws.includes(name) && !S.cfg.favImg[name] && /^https:\/\//.test(url)) { S.cfg.favImg[name] = url; ph++; }
   if (ph) S.cfg.upd = Date.now();
   save(); renderAll();
   if (!(p.v || []).length) toast("這次沒抓到影片（網站版面可能變了）");
   else toast(`📚 採集完成：新增 ${n} 部，共 ${candList().length} 部${ph ? `；補上 ${ph} 張女優照片` : ""}`);
+  if (p.live) redrawOnCollect = false;
   collectDone(n, (p.v || []).length, (p.st || []).map(x => x[0] + " " + x[1]).join("、"));
+  if (p.live) liveDraw(p.v || []);
 });
 window.addEventListener("message", e => {
   const d = e.data; if (!d || !d.picker || !Array.isArray(d.photos)) return;
@@ -1045,7 +1094,7 @@ function mergeData(a, b) {
     if (!cur) cm.set(v.c, Object.assign({}, v, { s: (v.s || []).slice(), alt: (v.alt || []).slice() }));
     else { addVars(cur, [{ u: v.u, t: v.t }, ...(v.alt || [])]); for (const x of v.s || []) if (!cur.s.includes(x)) cur.s.push(x); if ((v.upd || 0) > (cur.upd || 0)) { cur.upd = v.upd; if (v.b) cur.b = v.b; if (v.t) cur.t = v.t; } }
   }
-  const cand = [...cm.values()].sort((x, y) => (y.upd || 0) - (x.upd || 0)).slice(0, 4000);
+  const cand = [...cm.values()].sort((x, y) => (y.upd || 0) - (x.upd || 0)).slice(0, 8000);
   return Object.assign({}, a, { items, gone, cfg, cand, cgone });
 }
 const b64e = s => btoa(unescape(encodeURIComponent(s))), b64d = s => decodeURIComponent(escape(atob(s.replace(/\s/g, ""))));
