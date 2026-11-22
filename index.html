@@ -817,6 +817,7 @@ function pickAny() {
   const acts = [...active].filter(k => S.cfg.kws.includes(k)), kws = [...activeW, ...tempRaw()], conds = poolList().filter(e => activeC.has(e.label));
   const la = acts.map(x => x.toLowerCase()), lk = kws.map(x => x.toLowerCase()), lc = conds.map(e => e.label.toLowerCase());
   const textOk = h => (!la.length || la.some(n => h.includes(n))) && lk.every(k => h.includes(k));
+  const libAll = new Map(candList().map(v => [v.c, v]));
   const pool = [], byCode = new Map();                 // 同一個番號只出現一次；片單和影片庫都有時，留版本比較好的那個
   if (SRC.lib) for (const v of candList()) {
     if (S.cgone[v.c]) continue;
@@ -827,6 +828,8 @@ function pickAny() {
     if (!textOk((it.title + " " + it.code + " " + it.url).toLowerCase())) continue;
     const o = it.code && byCode.get(it.code);
     if (o) { if (it.tier > o.tier) { pool.splice(pool.indexOf(o), 1); pool.push({ kind: "item", it, key: keyOf(it), tier: it.tier }); } continue; }
+    const lv = it.code && libAll.get(it.code);              // 片單裡這部，影片庫有更好的版本（例如查到無碼版）→ 換成好的（不受女優／關鍵字篩選影響，因為是同一個番號）
+    if (lv && !S.cgone[lv.c] && bestVar(lv).tier > it.tier) { pool.push({ kind: "vid", v: lv, key: lv.c, tier: bestVar(lv).tier }); continue; }
     pool.push({ kind: "item", it, key: keyOf(it), tier: it.tier });
   }
   const parts = [acts.length ? `女優 ${acts.join("、")}（任一位）` : "", kws.length ? `關鍵字 ${kws.join("＋")}（要同時符合）` : "", conds.length ? `條件 ${conds.map(e => e.label).join("、")}（任一個）` : ""].filter(Boolean);
