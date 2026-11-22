@@ -183,6 +183,7 @@ details.more{margin-top:10px}details.more summary{cursor:pointer;color:var(--mut
   <div class="chips" id="srcchips"><span class="chip" data-s="list">📋 我的片單</span><span class="chip" data-s="lib">📚 影片庫</span></div>
   <div class="modehint" id="modehint"></div>
   <div class="small mut" id="libinfo" style="margin:-4px 2px 8px"></div>
+  <div class="small" id="collectStat" style="display:none;margin:0 2px 10px;padding:8px 10px;border-radius:10px;background:#1d1d24"></div>
   <details class="more" id="condbox"><summary>📂 條件（網站分類，可複選；只對影片庫有效）</summary><div class="chips" id="cchips"></div></details>
   <input type="search" id="kw" placeholder="或臨時輸入關鍵字（只這次用，不會存）">
   <button class="pri big" id="doDraw">🎲 抽</button>
@@ -576,11 +577,13 @@ var txt=A[i].textContent.replace(/\s+/g,' ').trim(),title=txt.length>=8?txt:(alt
 var th=im?(im.getAttribute('data-src')||im.getAttribute('data-original')||im.getAttribute('src')||''):'';
 if(th){try{th=new URL(th,base).toString();}catch(e){th='';}}
 var prev=out[code];
-if(!prev)prev=out[code]={c:code,t:'',u:u.toString(),b:''};
+if(!prev)prev=out[code]={c:code,t:'',u:u.toString(),b:'',_v:{}};
+var vr=prev._v[slug]||(prev._v[slug]={u:u.toString(),t:''});
+if(title&&(!vr.t||title.length>vr.t.length))vr.t=title.slice(0,90);
 if(title&&(!prev.t||title.length>prev.t.length))prev.t=title.slice(0,90);
 if(th&&!prev.b)prev.b=th;
 }
-return Object.keys(out).map(function(k){var v=out[k];if(!v.t)v.t=v.c.toUpperCase();return v;});
+return Object.keys(out).map(function(k){var v=out[k],vs=Object.keys(v._v).map(function(s){return v._v[s];});if(!v.t)v.t=v.c.toUpperCase();v.u=vs[0].u;v.alt=vs.slice(1);delete v._v;return v;});
 }
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 function here(){
@@ -620,7 +623,7 @@ found=parse(h,r.url||j.urls[ui]);
 }catch(e){}
 found.forEach(function(v){
 var cur=map[v.c];
-if(!cur){v.s=[j.src];map[v.c]=v;}else if(cur.s.indexOf(j.src)<0){cur.s.push(j.src);}
+if(!cur){v.s=[j.src];map[v.c]=v;}else{if(cur.s.indexOf(j.src)<0)cur.s.push(j.src);[{u:v.u,t:v.t}].concat(v.alt||[]).forEach(function(a){var sg=function(x){var q=new URL(x).pathname.split('/').filter(Boolean);return q[q.length-1];};if(sg(a.u)===sg(cur.u)||cur.alt.some(function(z){return sg(z.u)===sg(a.u);}))return;cur.alt.push(a);});}
 });
 got+=found.length;
 if(!found.length&&j.stop){n+=j.urls.length-ui-1;break;}
@@ -652,6 +655,26 @@ function siteOrigin() {
 }
 function bm3Href() { return "javascript:" + encodeURIComponent("(" + COLLECT_FN.toString() + ")(" + JSON.stringify(location.origin + location.pathname) + ")"); }
 const collectorOn = () => document.documentElement.dataset.pickerCollector === "1";
+/* 採集狀態：開了採集分頁 → 顯示「進行中＋已經幾秒」；收到結果 → 顯示收到幾部；太久沒回 → 明講沒收到 */
+let collectWait = null, collectTick = null, redrawOnCollect = false;
+function lastCollect() { try { return JSON.parse(localStorage.getItem("picker.lastCollect") || "null"); } catch (e) { return null; } }
+function setCollectStat(html, cls) { const b = $("collectStat"); if (!html) { b.style.display = "none"; return; } b.style.display = "block"; b.textContent = html; b.style.color = cls === "err" ? "#ff9a9a" : cls === "ok" ? "#8bd48f" : "#f2f2f2"; }
+function startCollectWatch(auto) {
+  collectWait = { t: Date.now(), auto }; clearInterval(collectTick);
+  const tick = () => {
+    if (!collectWait) return; const s = Math.round((Date.now() - collectWait.t) / 1000);
+    if (!collectWait.auto) return setCollectStat("📂 已開網站分頁：請到那一頁按書籤「📥採集影片」，跑完按「📤 送回片單工具」。", "");
+    if (s > 150) { setCollectStat(`⚠ 已經 ${s} 秒沒收到採集結果。到剛開的網站分頁看一下：有沒有出現黑底進度框？沒有＝採集腳本沒在跑（檢查 Tampermonkey）；網站要你按「我不是機器人」也會卡住。`, "err"); clearInterval(collectTick); return; }
+    setCollectStat(`⏳ 採集中…已 ${s} 秒（網站分頁左上角有黑底進度框，抓完會自己關閉、結果自動回來）`, "");
+  };
+  tick(); collectTick = setInterval(tick, 1000);
+}
+function collectDone(n, total, st) {
+  collectWait = null; clearInterval(collectTick);
+  const info = { t: Date.now(), n, total, st: st || "" }; try { localStorage.setItem("picker.lastCollect", JSON.stringify(info)); } catch (e) { /* 忽略 */ }
+  setCollectStat(`✅ 採集完成 ${new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })}：這次抓到 ${total} 部，新增 ${n} 部（影片庫共 ${candList().length} 部）${st ? "｜" + st : ""}`, total ? "ok" : "err");
+  if (redrawOnCollect) { redrawOnCollect = false; pickAny(); }
+}
 function openCollect(names, conds) {
   const o = siteOrigin(); if (!o) { toast("先到 ⚙ 設定網站網址（搜尋網址）"); return null; }
   const plan = { a: collectorOn() ? 1 : 0, search: S.cfg.search, names, conds: conds.map(e => ({ l: e.label, t: e.tpl, m: e.max || +S.cfg.max || 20 })), K: Math.min(60, Math.max(1, +S.cfg.crawlMax || 30)) };
@@ -659,7 +682,25 @@ function openCollect(names, conds) {
   const w = window.open(o + "/#picker=" + enc, "_blank");
   if (!w) { toast("瀏覽器擋了彈出視窗：網址列右邊點「已封鎖彈出視窗」→ 一律允許，再按一次"); return null; }
   toast(collectorOn() ? "🔄 已開採集分頁，抓完會自動回來、自動關掉" : "已開網站分頁，但沒偵測到自動採集腳本：到那一頁按書籤「📥採集影片」");
+  startCollectWatch(collectorOn());
   return w;
+}
+/* 同一個番號在網站上常有好幾個版本（一般／中文／無碼…，網址不同）：全部記在 alt，抽的時候再挑最好的 */
+function addVars(v, list) {
+  v.alt = v.alt || [];
+  for (const a of list || []) {
+    if (!a || !a.u) continue; const u = String(a.u);
+    if (slugOf(u) === slugOf(v.u) || v.alt.some(z => slugOf(z.u) === slugOf(u))) continue;
+    if (v.alt.length < 8) v.alt.push({ u, t: String(a.t || "").slice(0, 120) });
+  }
+}
+function bestVar(v) {                                  // 這部所有版本裡最好的：無碼＋中文 > 無碼 > 中文 > 一般
+  let best = null;
+  for (const x of [{ u: v.u, t: v.t }, ...(v.alt || [])]) {
+    const r = { u: x.u, t: x.t || v.t, tier: analyze(x.u, x.t || v.t).tier };
+    if (!best || r.tier > best.tier) best = r;
+  }
+  return best;
 }
 function mergeCand(list) {
   const now = Date.now(); let add = 0;
@@ -668,8 +709,8 @@ function mergeCand(list) {
     if (!x || !x.c || !x.u) continue;
     const c = String(x.c).toLowerCase(); if (S.cgone[c]) continue;
     const src = (x.s || []).map(String), cur = map.get(c);
-    if (!cur) { map.set(c, { c, t: String(x.t || c).slice(0, 120), u: String(x.u), b: x.b ? String(x.b) : "", s: src, upd: now }); add++; }
-    else { for (const k of src) if (!cur.s.includes(k)) cur.s.push(k); if (x.b && !cur.b) cur.b = String(x.b); cur.upd = now; }
+    if (!cur) { const nv = { c, t: String(x.t || c).slice(0, 120), u: String(x.u), b: x.b ? String(x.b) : "", s: src, upd: now, alt: [] }; addVars(nv, x.alt || []); map.set(c, nv); add++; }
+    else { for (const k of src) if (!cur.s.includes(k)) cur.s.push(k); if (x.b && !cur.b) cur.b = String(x.b); addVars(cur, [{ u: x.u, t: x.t }, ...(x.alt || [])]); cur.upd = now; }
   }
   S.cand = [...map.values()].sort((a, b) => (b.upd || 0) - (a.upd || 0)).slice(0, 4000);
   return add;
@@ -680,6 +721,7 @@ function renderLib() {
   const have = new Set(); for (const v of candList()) for (const x of v.s || []) have.add(x);
   const fresh = S.cfg.kws.filter(k => !have.has(k));                     // 還沒採集過的女優（例如在手機上加的）
   if (fresh.length) li.appendChild(document.createTextNode(`⚠ ${fresh.length} 位還沒採集：${fresh.slice(0, 3).join("、")}${fresh.length > 3 ? "…" : ""}　`));
+  const lc = lastCollect(); if (lc) li.appendChild(document.createTextNode(`上次採集 ${new Date(lc.t).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}（抓到 ${lc.total} 部）　`));
   const b = el("button", "sm", fresh.length ? "📥 採集她們" : "📥 重新採集全部最愛"); b.id = "libCollect";
   b.onclick = () => { const names = fresh.length ? fresh : S.cfg.kws.slice(); if (!names.length) return toast("還沒有最愛女優"); if (!collectorOn()) toast("電腦：裝好採集小腳本會自動；手機不能採集，請在電腦上按"); openCollect(names, fresh.length ? [] : poolList()); };
   li.appendChild(b);
@@ -688,7 +730,7 @@ function collectCard(msg, names, conds) {
   const d = el("div", "idle");
   d.appendChild(el("div", "", msg));
   const b = el("button", "pri", "📥 開始採集"); b.style.marginTop = "10px";
-  b.onclick = () => openCollect(names, conds);
+  b.onclick = () => { redrawOnCollect = true; openCollect(names, conds); };
   d.appendChild(b);
   d.appendChild(el("div", "small", collectorOn() ? "✅ 偵測到自動採集腳本：按下去會開網站分頁，抓完自動關閉、自動送回。" : "⚠ 沒偵測到「自動採集腳本」（Tampermonkey）。電腦 Chrome：到 chrome://extensions → Tampermonkey 詳細資料 → 開啟「允許使用者指令碼」（Chrome 更新後常被關掉），並確認有「片單小工具 自動採集」這支且已啟用；沒有的話就用下面的書籤做法。手機無法採集。"));
   d.lastChild.style.cssText = "margin:10px 0;text-align:left";
@@ -696,17 +738,18 @@ function collectCard(msg, names, conds) {
   show(d);
 }
 function vidTile(v, ctx) {
-  const t = el("div", "rt vid"), ph = el("a", "ph"); ph.href = v.u; ph.target = "_blank"; ph.rel = "noopener";
+  const bv = bestVar(v), nAlt = (v.alt || []).length;                    // 抽到這個番號 → 給最好的版本
+  const t = el("div", "rt vid"), ph = el("a", "ph"); ph.href = bv.u; ph.target = "_blank"; ph.rel = "noopener";
   const none = () => el("div", "noimg", v.c.toUpperCase()), u = vThumb(v);
   if (u) { const im = document.createElement("img"); im.referrerPolicy = "no-referrer"; im.alt = ""; im.src = u; im.onerror = () => im.replaceWith(none()); ph.appendChild(im); } else ph.appendChild(none());
-  ph.appendChild(el("span", "bd", "🎞 影片")); ph.appendChild(el("div", "cd", v.c.toUpperCase()));
-  const title = el("div", "rtt", v.t), meta = "📚 影片庫" + ((v.s || []).length ? "　來源：" + v.s.slice(0, 3).join("、") : "");
+  ph.appendChild(el("span", "bd t" + bv.tier, TIER_NAME[bv.tier])); ph.appendChild(el("div", "cd", v.c.toUpperCase()));
+  const title = el("div", "rtt", bv.t), meta = "📚 影片庫" + (nAlt ? `　共 ${nAlt + 1} 個版本，已挑最好的` : "") + ((v.s || []).length ? "　來源：" + v.s.slice(0, 3).join("、") : "");
   const row = el("div", "rtb");
-  const open = el("a", "go", "▶ 開啟"); open.href = v.u; open.target = "_blank"; open.rel = "noopener";
+  const open = el("a", "go", "▶ 開啟"); open.href = bv.u; open.target = "_blank"; open.rel = "noopener";
   const add = el("button", "", "➕"); add.title = "加進片單";
   const again = el("button", "", "🔁"); again.title = "再抽（換這一張）";
   const no = el("button", "", "👎"); no.title = "不要（以後不再抽到）";
-  add.onclick = () => { const r = upsert(v.u, v.t); save(); renderAll(); toast({ new: "✅ 已加進片單", better: "✅ 已換成更好的版本", dup: "已經在片單裡了", upd: "已在片單裡", skip: "網址不對", fav: "⭐ 已加進最愛", favdup: "已有" }[r] || "已處理"); };
+  add.onclick = () => { const r = upsert(bv.u, bv.t); for (const x of v.alt || []) upsert(x.u, x.t); save(); renderAll(); toast({ new: "✅ 已加進片單", better: "✅ 已換成更好的版本", dup: "已經在片單裡了", upd: "已在片單裡", skip: "網址不對", fav: "⭐ 已加進最愛", favdup: "已有" }[r] || "已處理"); };
   again.onclick = () => { const n = ctx.next(v.c); if (n) t.replaceWith(n); else toast("沒有別的可抽了"); };
   no.onclick = () => { S.cgone[v.c] = Date.now(); S.cand = candList().filter(x => x.c !== v.c); save(); renderLib(); const n = ctx.next(v.c); if (n) t.replaceWith(n); else t.remove(); };
   row.append(open, add, again, no);
@@ -728,12 +771,17 @@ function pickAny() {
   const acts = [...active].filter(k => S.cfg.kws.includes(k)), kws = [...activeW, ...tempRaw()], conds = poolList().filter(e => activeC.has(e.label));
   const la = acts.map(x => x.toLowerCase()), lk = kws.map(x => x.toLowerCase()), lc = conds.map(e => e.label.toLowerCase());
   const textOk = h => (!la.length || la.some(n => h.includes(n))) && lk.every(k => h.includes(k));
-  const pool = [], codes = new Set();
-  if (SRC.list && !lc.length) for (const it of S.items) if (textOk((it.title + " " + it.code + " " + it.url).toLowerCase())) { pool.push({ kind: "item", it, key: keyOf(it) }); if (it.code) codes.add(it.code); }
+  const pool = [], byCode = new Map();                 // 同一個番號只出現一次；片單和影片庫都有時，留版本比較好的那個
   if (SRC.lib) for (const v of candList()) {
-    if (S.cgone[v.c] || codes.has(v.c)) continue;
+    if (S.cgone[v.c]) continue;
     const srcs = (v.s || []).map(x => String(x).toLowerCase());
-    if (textOk(vHay(v)) && (!lc.length || lc.some(c => srcs.includes(c)))) pool.push({ kind: "vid", v, key: v.c });
+    if (textOk(vHay(v)) && (!lc.length || lc.some(c => srcs.includes(c)))) { const e = { kind: "vid", v, key: v.c, tier: bestVar(v).tier }; pool.push(e); byCode.set(v.c, e); }
+  }
+  if (SRC.list && !lc.length) for (const it of S.items) {
+    if (!textOk((it.title + " " + it.code + " " + it.url).toLowerCase())) continue;
+    const o = it.code && byCode.get(it.code);
+    if (o) { if (it.tier > o.tier) { pool.splice(pool.indexOf(o), 1); pool.push({ kind: "item", it, key: keyOf(it), tier: it.tier }); } continue; }
+    pool.push({ kind: "item", it, key: keyOf(it), tier: it.tier });
   }
   const parts = [acts.length ? `女優 ${acts.join("、")}（任一位）` : "", kws.length ? `關鍵字 ${kws.join("＋")}（要同時符合）` : "", conds.length ? `條件 ${conds.map(e => e.label).join("、")}（任一個）` : ""].filter(Boolean);
   if (!pool.length) {
@@ -743,6 +791,13 @@ function pickAny() {
   }
   const picks = drawFrom(pool, pickN()), shown = new Set(picks.map(e => e.key)), ctx = mixCtx(pool, shown);
   save(false); showGrid(picks.map(e => mixTile(e, ctx)), `${parts.length ? parts.join("　") + "。" : "不限條件。"}符合的有 ${pool.length} 部。`);
+  if (pool.length < pickN()) {                       // 設定一次抽 N 部，但符合的不夠 → 講明白為什麼，並給採集鈕
+    const w = el("div", "idle"); w.style.marginTop = "10px";
+    w.appendChild(el("div", "", `你設定一次抽 ${pickN()} 部，但符合的只有 ${pool.length} 部（${SRC.list ? `片單 ${pool.filter(e => e.kind === "item").length} 部` : ""}${SRC.list && SRC.lib ? "、" : ""}${SRC.lib ? `影片庫 ${pool.filter(e => e.kind === "vid").length} 部` : ""}）。`));
+    if (SRC.lib && parts.length) { const b = el("button", "pri", "📥 去採集更多"); b.style.marginTop = "8px"; b.onclick = () => { redrawOnCollect = true; openCollect([...acts, ...kws], conds); }; w.appendChild(b); }
+    else if (!SRC.lib) w.appendChild(el("div", "small mut", "只選了「我的片單」；勾上「📚 影片庫」可以抽到更多。"));
+    $("result").appendChild(w);
+  }
 }
 $("doDraw").onclick = pickAny;
 $("fab").onclick = () => { pickAny(); $("result").scrollIntoView({ behavior: "smooth", block: "start" }); };
@@ -880,6 +935,7 @@ window.addEventListener("message", e => {                    // 採集小腳本�
   save(); renderAll();
   if (!(p.v || []).length) toast("這次沒抓到影片（網站版面可能變了）");
   else toast(`📚 採集完成：新增 ${n} 部，共 ${candList().length} 部${ph ? `；補上 ${ph} 張女優照片` : ""}`);
+  collectDone(n, (p.v || []).length, (p.st || []).map(x => x[0] + " " + x[1]).join("、"));
 });
 window.addEventListener("message", e => {
   const d = e.data; if (!d || !d.picker || !Array.isArray(d.photos)) return;
@@ -914,6 +970,7 @@ function applyVideos() {
     const st = (o.st || []).map(x => x[0] + " " + x[1]).join("、");
     if (!(o.v || []).length) { $("result").textContent = ""; show(card("這次沒抓到影片", "網站的版面可能和我預期不同。把下面這段貼給 Claude 看就能修：" + (o.sm || "（沒有範例）"))); }
     else toast(`📚 新增 ${n} 部（共 ${candList().length} 部）${st ? "｜" + st : ""}`);
+    collectDone(n, (o.v || []).length, st);
   } catch (e) { toast("採集結果讀不懂"); }
   return true;
 }
@@ -985,8 +1042,8 @@ function mergeData(a, b) {
   for (const v of [...(a.cand || []), ...(b.cand || [])]) {
     if (cgone[v.c] && cgone[v.c] >= (v.upd || 0)) continue;
     const cur = cm.get(v.c);
-    if (!cur) cm.set(v.c, Object.assign({}, v, { s: (v.s || []).slice() }));
-    else { for (const x of v.s || []) if (!cur.s.includes(x)) cur.s.push(x); if ((v.upd || 0) > (cur.upd || 0)) { cur.upd = v.upd; if (v.b) cur.b = v.b; if (v.t) cur.t = v.t; } }
+    if (!cur) cm.set(v.c, Object.assign({}, v, { s: (v.s || []).slice(), alt: (v.alt || []).slice() }));
+    else { addVars(cur, [{ u: v.u, t: v.t }, ...(v.alt || [])]); for (const x of v.s || []) if (!cur.s.includes(x)) cur.s.push(x); if ((v.upd || 0) > (cur.upd || 0)) { cur.upd = v.upd; if (v.b) cur.b = v.b; if (v.t) cur.t = v.t; } }
   }
   const cand = [...cm.values()].sort((x, y) => (y.upd || 0) - (x.upd || 0)).slice(0, 4000);
   return Object.assign({}, a, { items, gone, cfg, cand, cgone });
