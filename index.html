@@ -141,6 +141,8 @@ details.more{margin-top:10px}details.more summary{cursor:pointer;color:var(--mut
 .act .ax{right:4px}.act .ap{left:4px;color:#fff}
 .rt.web .ph img{width:100%;height:100%;min-height:150px;max-height:210px;object-fit:cover}
 .rt.web.act .rtb{grid-template-columns:2fr 1fr 1fr}.rt .rtb .deep{background:#3a2142}
+#fab{position:fixed;right:14px;bottom:calc(18px + env(safe-area-inset-bottom));z-index:8;border-radius:28px;padding:14px 20px;font-weight:800;box-shadow:0 8px 24px #d81b6088}
+#srcchips .chip{font-size:15px;padding:8px 14px}
 </style>
 </head>
 <body>
@@ -149,29 +151,43 @@ details.more{margin-top:10px}details.more summary{cursor:pointer;color:var(--mut
 <!-- 這台裝置還沒連上片單（空的）→ 直接在這裡連 -->
 <div class="card onboard" id="onboard" style="display:none">
   <h2>🔗 這台裝置還沒連上你的片單</h2>
-  <div class="small mut" style="margin-bottom:8px">你的片單存在你自己的私人 GitHub，每一台裝置第一次都要連一次（填 repo 和權杖）。連上後片單、女優、關鍵字、照片都會自動出現。</div>
+  <div class="small mut" style="margin-bottom:8px">⚠ 如果你「每次關掉 Chrome 再開都變空的」：是 Chrome 把網站資料清掉了（設定 → 隱私權和安全性 → 第三方 Cookie → 取消「關閉所有視窗時清除 Cookie 和網站資料」，或在「一律可使用網站資料」加入 haowen325.github.io）。<br>你的片單存在你自己的私人 GitHub，每一台裝置第一次都要連一次（填 repo 和權杖）。連上後片單、女優、關鍵字、照片都會自動出現。</div>
   <input type="text" id="obRepo" placeholder="repo（例：帳號/資料repo名）">
   <input type="password" id="obTok" placeholder="權杖 github_pat_…" style="margin-top:8px">
   <button class="pri big" id="obGo" style="margin-top:10px">連線並載入片單</button>
   <div class="small" id="obMsg" style="margin-top:8px"></div>
 </div>
 
-<!-- 抽：先選種類，再按「抽」 -->
+<!-- 加入：影片網址 → 片單；名字／關鍵字 → 最愛 -->
+<div class="card addcard">
+  <h2>➕ 加入</h2>
+  <textarea id="paste" style="min-height:64px" placeholder="先選下面要加到哪一類，再貼：&#10;片單＝影片網址（可很多筆）；女優／關鍵字＝名字（逗號或換行分開）"></textarea>
+  <div class="row tgt" id="addTarget"><span class="mut small" style="flex:0 0 auto">加到：</span><button class="sm" data-t="item">📋 片單</button><button class="sm" data-t="act">⭐ 女優</button><button class="sm" data-t="word">🔑 關鍵字</button></div>
+  <div class="mut small" style="margin-top:4px">三種各存各的，不會混在一起。</div>
+  <div class="row" style="margin-top:8px"><button class="pri" id="doAdd">加入</button><button id="doFile">匯入書籤檔</button></div>
+  <input type="file" id="file" accept=".html,.htm,.txt,.json" style="display:none">
+  <div class="mut small" id="addMsg" style="margin-top:8px"></div>
+  <details class="more"><summary>更快的方法：看到喜歡的影片一鍵加入</summary>
+    <div class="small" style="margin:8px 0">電腦：把下面這顆「➕片單」拖到書籤列，在影片頁按它就會加入。手機（Android）：先把這個工具「安裝」成 App，之後在瀏覽器按「分享」，選單裡就有「片單」。</div>
+    <a class="bm" id="bm" href="#">➕片單</a>
+    <div class="small" style="margin:12px 0 8px"><b>📷 抓女優照片</b>：打開網站上有女優頭像的頁面（她的主頁、女優列表、你收藏的女優頁都行），按這顆書籤，會把頁面上的頭像抓回來，名字對得上你「喜歡的女優」的就自動補上照片。</div>
+    <a class="bm" id="bm2" href="#">📷抓照片</a>
+    <div class="small" style="margin:12px 0 8px"><b>📥 採集影片</b>：「最愛女優」「全站」要抽到<b>真正的影片</b>，需要先把網站上的影片收進「影片庫」。把這顆拖到書籤列；按下抽的畫面上「📥 開始採集」會幫你開好網站分頁，到那一頁按這顆書籤，等它跑完再按「📤 送回片單工具」。影片庫會跟著同步到手機。</div>
+    <a class="bm" id="bm3" href="#">📥採集影片</a>
+  </details>
+</div>
+
+<!-- 抽：選範圍（片單／影片庫可複選）＋ 下面點選女優／關鍵字／條件（可複選）→ 按「抽」 -->
 <div class="card drawcard">
-  <div class="modebar" id="modebar">
-    <button data-m="list"><span class="ic">🎲</span><span>片單</span></button>
-    <button data-m="fav"><span class="ic">⭐</span><span>最愛女優</span></button>
-    <button data-m="site"><span class="ic">🌐</span><span>全站</span></button>
-  </div>
+  <div class="small mut" style="margin-bottom:6px">從哪裡抽（可複選）</div>
+  <div class="chips" id="srcchips"><span class="chip" data-s="list">📋 我的片單</span><span class="chip" data-s="lib">📚 影片庫</span></div>
   <div class="modehint" id="modehint"></div>
   <div class="small mut" id="libinfo" style="margin:-4px 2px 8px"></div>
-  <div id="siteopts" style="display:none">
-    <div class="small mut" style="margin:2px 0 6px">條件（可多選；不選＝全部條件隨機挑）</div>
-    <div class="chips" id="cchips"></div>
-    <input type="search" id="kw" placeholder="或臨時輸入關鍵字（只這次用，不會存）">
-  </div>
+  <details class="more" id="condbox"><summary>📂 條件（網站分類，可複選；只對影片庫有效）</summary><div class="chips" id="cchips"></div></details>
+  <input type="search" id="kw" placeholder="或臨時輸入關鍵字（只這次用，不會存）">
   <button class="pri big" id="doDraw">🎲 抽</button>
 </div>
+<button class="pri" id="fab" title="抽">🎲 抽</button>
 <div id="result"></div>
 
 <!-- 喜歡的女優（照片＋名字） -->
@@ -194,23 +210,6 @@ details.more{margin-top:10px}details.more summary{cursor:pointer;color:var(--mut
   <div class="row"><input type="search" id="wnew" placeholder="輸入關鍵字，按「＋加入」或 Enter"><button class="sm" id="wadd" style="flex:0 0 auto">＋ 加入</button></div>
 </div>
 
-<!-- 加入：影片網址 → 片單；名字／關鍵字 → 最愛 -->
-<div class="card addcard">
-  <h2>➕ 加入</h2>
-  <textarea id="paste" placeholder="貼上影片網址（可以很多筆）→ 加進片單&#10;輸入名字（用逗號或換行分開）→ 加進下面選的「女優」或「關鍵字」"></textarea>
-  <div class="row tgt" id="addTarget"><span class="mut small" style="flex:0 0 auto">沒有網址時，文字加到：</span><button class="sm on" data-t="act">⭐ 女優</button><button class="sm" data-t="word">🔑 關鍵字</button></div>
-  <div class="row" style="margin-top:8px"><button class="pri" id="doAdd">加入</button><button id="doFile">匯入書籤檔</button></div>
-  <input type="file" id="file" accept=".html,.htm,.txt,.json" style="display:none">
-  <div class="mut small" id="addMsg" style="margin-top:8px"></div>
-  <details class="more"><summary>更快的方法：看到喜歡的影片一鍵加入</summary>
-    <div class="small" style="margin:8px 0">電腦：把下面這顆「➕片單」拖到書籤列，在影片頁按它就會加入。手機（Android）：先把這個工具「安裝」成 App，之後在瀏覽器按「分享」，選單裡就有「片單」。</div>
-    <a class="bm" id="bm" href="#">➕片單</a>
-    <div class="small" style="margin:12px 0 8px"><b>📷 抓女優照片</b>：打開網站上有女優頭像的頁面（她的主頁、女優列表、你收藏的女優頁都行），按這顆書籤，會把頁面上的頭像抓回來，名字對得上你「喜歡的女優」的就自動補上照片。</div>
-    <a class="bm" id="bm2" href="#">📷抓照片</a>
-    <div class="small" style="margin:12px 0 8px"><b>📥 採集影片</b>：「最愛女優」「全站」要抽到<b>真正的影片</b>，需要先把網站上的影片收進「影片庫」。把這顆拖到書籤列；按下抽的畫面上「📥 開始採集」會幫你開好網站分頁，到那一頁按這顆書籤，等它跑完再按「📤 送回片單工具」。影片庫會跟著同步到手機。</div>
-    <a class="bm" id="bm3" href="#">📥採集影片</a>
-  </details>
-</div>
 
 <!-- 片單 -->
 <div class="card">
@@ -287,6 +286,8 @@ const DEFAULT_POOL = ["最新=https://missav.ai/new?page={page}|100", "新作上
 if (!S.cfg.poolSeeded) {              // 第一次：隨機來源是空的就放入網站上驗證過的分類（之後你改的以你的為準）
   if (!(S.cfg.pool || []).length) S.cfg.pool = DEFAULT_POOL.slice();
   S.cfg.poolSeeded = 1;
+  const now = Date.now(); S.cfg.ts = Object.assign({}, S.cfg.ts, { pool: now, poolSeeded: now });   // 算「剛改的」，同步時不會被另一台舊的空設定蓋掉
+  try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) { /* 存不了就下次 */ }
 }
 snapCfg();                       // {items:[], gone:{}, cfg:{}, sync:{repo,token,sha}, recent:[]}
 let undoFn = null, lastPick = null, manageMode = false, sel = new Set(), syncTimer = null, syncing = false;
@@ -339,7 +340,7 @@ function addFav(k) {
 function flushCollect() {
   const names = [...new Set(collectQ)]; collectQ = []; if (!names.length) return;
   if (!collectorOn()) return toast(`已加入「${names[0]}」${names.length > 1 ? "等" : ""}。影片庫要採集才抽得到她：按影片庫旁的「📥 採集」`);
-  if (!openCollect(names, [])) toast("瀏覽器擋了彈出視窗：按影片庫旁的「📥 採集」再試一次");
+  openCollect(names, []);
 }
 function upsert(url, title) {
   url = (url || "").trim();
@@ -436,7 +437,9 @@ function poolList() {
     return { label, tpl, max: +body[1] > 0 ? +body[1] : 0 };
   }).filter(e => e.tpl);
 }
-let mode = "list"; try { mode = localStorage.getItem("picker.mode") || "list"; } catch (e) { /* 沒存到就用片單 */ }
+const SRC = { list: true, lib: true };      // 從哪裡抽：片單／影片庫（可複選）
+try { Object.assign(SRC, JSON.parse(localStorage.getItem("picker.src") || "{}")); } catch (e) { /* 沒存到就都開 */ }
+try { addTgt = localStorage.getItem("picker.tgt") || "act"; } catch (e) { /* 沒存到就用女優 */ }
 /* 女優照片：①自己設的照片網址（或書籤在她的頁面抓回來的）②片單裡她的片的封面 ③名字第一個字 */
 function avatarSrc(name) {
   const m = (S.cfg.favImg || {})[name]; if (m) return m;
@@ -489,19 +492,17 @@ function renderChips() {
   $("favCount").textContent = favs.length ? `（${favs.length} 位）` : "";
 }
 function renderMode() {
-  document.querySelectorAll("#modebar button").forEach(b => b.classList.toggle("on", b.dataset.m === mode));
-  const nA = active.size, nW = activeW.size, favs = S.cfg.kws.length;
-  const hint = {
-    list: `從片單 ${S.items.length} 部裡隨機抽 ${pickN()} 部。`,
-    fav: favs ? `從影片庫抽真正的影片：${nA ? `只用你點選的 ${nA} 位（多位＝從這幾位裡隨機挑）` : `沒點選＝全部 ${favs} 位`}。` : "還沒有喜歡的女優，先到下面「➕ 加入」輸入名字（加到「女優」）。",
-    site: (() => { const nC = activeC.size, tot = nA + nW + nC; return `去「全站」隨機找：${tot ? `你選的${nA ? ` ${nA} 位女優` : ""}${nW ? ` ${nW} 個關鍵字` : ""}${nC ? ` ${nC} 個條件` : ""}（每一格隨機挑一個）` : `沒選＝從全部 ${poolList().length || 1} 個條件裡隨機挑`}；可以多選，也可以臨時輸入關鍵字。`; })()
-  }[mode];
-  $("modehint").textContent = hint;
-  $("siteopts").style.display = mode === "site" ? "block" : "none";
-  $("doDraw").textContent = { list: "🎲 從片單抽", fav: "⭐ 抽最愛女優", site: "🌐 全站隨機抽" }[mode];
+  document.querySelectorAll("#srcchips .chip").forEach(c => c.classList.toggle("on", !!SRC[c.dataset.s]));
+  document.querySelectorAll("#addTarget button").forEach(x => x.classList.toggle("on", x.dataset.t === addTgt));
+  const nA = [...active].filter(k => S.cfg.kws.includes(k)).length, nW = activeW.size, nC = activeC.size, tmp = tempRaw().length;
+  const where = [SRC.list ? `片單 ${S.items.length} 部` : "", SRC.lib ? `影片庫 ${candList().length} 部` : ""].filter(Boolean).join(" ＋ ");
+  const sel = [nA ? `${nA} 位女優（任一位）` : "", nW + tmp ? `${nW + tmp} 個關鍵字（要同時符合）` : "", nC ? `${nC} 個條件（任一個）` : ""].filter(Boolean);
+  $("modehint").textContent = (where ? `從 ${where} 裡隨機抽 ${pickN()} 部。` : "請至少選一個「從哪裡抽」。") + (sel.length ? `只要符合：${sel.join("、")}。` : "沒點選女優／關鍵字＝不限。");
+  $("fab").textContent = sel.length ? `🎲 抽（${nA + nW + nC + tmp}）` : "🎲 抽";
 }
-document.querySelectorAll("#modebar button").forEach(b => b.onclick = () => { mode = b.dataset.m; try { localStorage.setItem("picker.mode", mode); } catch (e) { /* 忽略 */ } renderMode(); });
-document.querySelectorAll("#addTarget button").forEach(b => b.onclick = () => { addTgt = b.dataset.t; document.querySelectorAll("#addTarget button").forEach(x => x.classList.toggle("on", x === b)); });
+document.querySelectorAll("#srcchips .chip").forEach(c => c.onclick = () => { SRC[c.dataset.s] = !SRC[c.dataset.s]; try { localStorage.setItem("picker.src", JSON.stringify(SRC)); } catch (e) { /* 忽略 */ } renderMode(); });
+document.querySelectorAll("#addTarget button").forEach(b => b.onclick = () => { addTgt = b.dataset.t; try { localStorage.setItem("picker.tgt", addTgt); } catch (e) { /* 忽略 */ } renderMode(); });
+$("kw").oninput = renderMode;
 $("favEdit").onclick = () => { favEditMode = !favEditMode; renderChips(); };
 $("wordEdit").onclick = () => { wordEditMode = !wordEditMode; renderChips(); };
 const wordAdd = () => { const v = $("wnew").value.split(/[\n,，、;；]+/).map(x => x.trim()).filter(Boolean); let n = 0; for (const k of v) if (addWord(k)) n++; $("wnew").value = ""; if (n) { save(); renderChips(); renderMode(); toast(`🔑 已加進關鍵字 ${n} 個`); } else if (v.length) toast("這個關鍵字已經有了"); };
@@ -512,10 +513,10 @@ const tempRaw = () => $("kw").value.split(/[\s,，]+/).filter(Boolean);
 const pickN = () => Math.min(8, Math.max(1, parseInt(S.cfg.pickN) || 4));
 function sample(arr, n) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a.slice(0, n); }
 function drawFrom(pool, n) {                     // 盡量不抽到最近抽過的
-  let cand = pool.filter(it => !S.recent.includes(keyOf(it)));
+  let cand = pool.filter(e => !S.recent.includes(e.key));
   if (cand.length < n) { S.recent = []; cand = pool; }
   const picks = sample(cand, n);
-  picks.forEach(it => S.recent.push(keyOf(it)));
+  picks.forEach(e => S.recent.push(e.key));
   S.recent = S.recent.slice(-Math.max(0, Math.min(60, pool.length - n)));
   return picks;
 }
@@ -536,29 +537,22 @@ function showGrid(tiles, note) {
   show(w);
 }
 /* 片單裡的一部：照片、片名（自動換行）、開啟／再抽／不要。再抽＝只換這一張；不要＝移除這一部並補一張新的 */
-function makeTile(it, state, badge) {
+function makeTile(it, ctx) {
   const t = el("div", "rt");
   const ph = el("a", "ph"); ph.href = it.url; ph.target = "_blank"; ph.rel = "noopener"; ph.appendChild(thumbEl(it, false));
   ph.appendChild(el("span", "bd t" + it.tier, TIER_NAME[it.tier]));
   if (it.code) ph.appendChild(el("div", "cd", it.code.toUpperCase()));
   const title = el("div", "rtt", it.title);
-  const meta = (badge ? "⭐ " + badge + "　" : "") + (it.alt && it.alt.length ? `另有 ${it.alt.length} 個版本` : "");
+  const meta = "📋 片單" + (it.alt && it.alt.length ? `　另有 ${it.alt.length} 個版本` : "");
   const row = el("div", "rtb");
   const open = el("a", "go", "▶ 開啟"); open.href = it.url; open.target = "_blank"; open.rel = "noopener";
   const again = el("button", "", "🔁"); again.title = "再抽（換這一張）";
   const no = el("button", "", "👎"); no.title = "不要（從片單移除）";
-  const next = prev => { state.shown.delete(keyOf(prev)); const c = state.pool.filter(x => S.items.includes(x) && !state.shown.has(keyOf(x)) && x !== prev); if (!c.length) return null; const n = c[Math.floor(Math.random() * c.length)]; state.shown.add(keyOf(n)); return n; };
-  again.onclick = () => { const n = next(it); if (n) t.replaceWith(makeTile(n, state, badge)); else toast("沒有別的可抽了"); };
-  no.onclick = () => { removeItem(it, true); const n = next(it); if (n) t.replaceWith(makeTile(n, state, badge)); else t.remove(); };
+  again.onclick = () => { const n = ctx.next(keyOf(it)); if (n) t.replaceWith(n); else toast("沒有別的可抽了"); };
+  no.onclick = () => { removeItem(it, true); const n = ctx.next(keyOf(it)); if (n) t.replaceWith(n); else t.remove(); };
   row.append(open, again, no);
   t.append(ph, title); if (meta) t.appendChild(el("div", "rtm", meta)); t.appendChild(row);
   return t;
-}
-function pickMine() {
-  const pool = S.items.slice();
-  if (!pool.length) return show(card("片單是空的", "先到下面「➕ 加入」貼網址。"));
-  const picks = drawFrom(pool, pickN()), state = { pool, shown: new Set(picks.map(keyOf)) };
-  save(false); showGrid(picks.map(it => makeTile(it, state)), `從片單 ${pool.length} 部裡隨機抽。`);
 }
 /* ───────── 影片庫（採集）：女優／關鍵字／條件抽到的是「真正的影片」，不是網站的分頁 ─────────
    規則：女優多選＝從這幾位裡隨機挑；關鍵字多選＝要同時符合；條件多選＝任一個；沒有符合的就說沒有 */
@@ -663,8 +657,9 @@ function openCollect(names, conds) {
   const plan = { a: collectorOn() ? 1 : 0, search: S.cfg.search, names, conds: conds.map(e => ({ l: e.label, t: e.tpl, m: e.max || +S.cfg.max || 20 })), K: Math.min(60, Math.max(1, +S.cfg.crawlMax || 30)) };
   const enc = btoa(unescape(encodeURIComponent(JSON.stringify(plan)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   const w = window.open(o + "/#picker=" + enc, "_blank");
-  if (w && collectorOn()) toast("🔄 已開採集分頁，抓完會自動回來、自動關掉");
-  return w || null;
+  if (!w) { toast("瀏覽器擋了彈出視窗：網址列右邊點「已封鎖彈出視窗」→ 一律允許，再按一次"); return null; }
+  toast(collectorOn() ? "🔄 已開採集分頁，抓完會自動回來、自動關掉" : "已開網站分頁，但沒偵測到自動採集腳本：到那一頁按書籤「📥採集影片」");
+  return w;
 }
 function mergeCand(list) {
   const now = Date.now(); let add = 0;
@@ -695,88 +690,62 @@ function collectCard(msg, names, conds) {
   const b = el("button", "pri", "📥 開始採集"); b.style.marginTop = "10px";
   b.onclick = () => openCollect(names, conds);
   d.appendChild(b);
+  d.appendChild(el("div", "small", collectorOn() ? "✅ 偵測到自動採集腳本：按下去會開網站分頁，抓完自動關閉、自動送回。" : "⚠ 沒偵測到「自動採集腳本」（Tampermonkey）。電腦 Chrome：到 chrome://extensions → Tampermonkey 詳細資料 → 開啟「允許使用者指令碼」（Chrome 更新後常被關掉），並確認有「片單小工具 自動採集」這支且已啟用；沒有的話就用下面的書籤做法。手機無法採集。"));
+  d.lastChild.style.cssText = "margin:10px 0;text-align:left";
   d.appendChild(el("div", "small mut", "會開一個網站分頁 → 在那一頁按書籤「📥採集影片」（還沒有的話，到下面「➕ 加入」展開「更快的方法」把它拖到書籤列）→ 跑完按「📤 送回片單工具」。"));
   show(d);
 }
-function vidTile(v, state) {
+function vidTile(v, ctx) {
   const t = el("div", "rt vid"), ph = el("a", "ph"); ph.href = v.u; ph.target = "_blank"; ph.rel = "noopener";
   const none = () => el("div", "noimg", v.c.toUpperCase()), u = vThumb(v);
   if (u) { const im = document.createElement("img"); im.referrerPolicy = "no-referrer"; im.alt = ""; im.src = u; im.onerror = () => im.replaceWith(none()); ph.appendChild(im); } else ph.appendChild(none());
   ph.appendChild(el("span", "bd", "🎞 影片")); ph.appendChild(el("div", "cd", v.c.toUpperCase()));
-  const title = el("div", "rtt", v.t), meta = (v.s || []).length ? "來源：" + v.s.slice(0, 3).join("、") : "";
+  const title = el("div", "rtt", v.t), meta = "📚 影片庫" + ((v.s || []).length ? "　來源：" + v.s.slice(0, 3).join("、") : "");
   const row = el("div", "rtb");
   const open = el("a", "go", "▶ 開啟"); open.href = v.u; open.target = "_blank"; open.rel = "noopener";
   const add = el("button", "", "➕"); add.title = "加進片單";
   const again = el("button", "", "🔁"); again.title = "再抽（換這一張）";
   const no = el("button", "", "👎"); no.title = "不要（以後不再抽到）";
-  const next = prev => { const c = state.pool.filter(x => !state.shown.has(x.c) && x !== prev && !S.cgone[x.c]); if (!c.length) return null; const n = c[Math.floor(Math.random() * c.length)]; state.shown.add(n.c); return n; };
   add.onclick = () => { const r = upsert(v.u, v.t); save(); renderAll(); toast({ new: "✅ 已加進片單", better: "✅ 已換成更好的版本", dup: "已經在片單裡了", upd: "已在片單裡", skip: "網址不對", fav: "⭐ 已加進最愛", favdup: "已有" }[r] || "已處理"); };
-  again.onclick = () => { const n = next(v); if (n) t.replaceWith(vidTile(n, state)); else toast("沒有別的可抽了"); };
-  no.onclick = () => { S.cgone[v.c] = Date.now(); S.cand = candList().filter(x => x.c !== v.c); save(); renderLib(); const n = next(v); if (n) t.replaceWith(vidTile(n, state)); else t.remove(); };
+  again.onclick = () => { const n = ctx.next(v.c); if (n) t.replaceWith(n); else toast("沒有別的可抽了"); };
+  no.onclick = () => { S.cgone[v.c] = Date.now(); S.cand = candList().filter(x => x.c !== v.c); save(); renderLib(); const n = ctx.next(v.c); if (n) t.replaceWith(n); else t.remove(); };
   row.append(open, add, again, no);
   t.append(ph, title); if (meta) t.appendChild(el("div", "rtm", meta)); t.appendChild(row);
   return t;
 }
-function pickVideos(f, note, emptyMsg, names, conds) {
-  const lib = candList();
-  if (!lib.length) return collectCard("影片庫還是空的：先採集網站上的影片，之後這裡抽到的就是真正的影片。", names, conds);
-  const pool = lib.filter(f);
-  if (!pool.length) return collectCard(emptyMsg + `（影片庫共 ${lib.length} 部）`, names, conds);
-  const picks = sample(pool, pickN()), state = { pool, shown: new Set(picks.map(v => v.c)) };
-  showGrid(picks.map(v => vidTile(v, state)), note + `符合的有 ${pool.length} 部。`);
+/* 抽：範圍＝片單／影片庫（可複選）；女優＝任一位、關鍵字＝要同時符合、條件＝任一個（只對影片庫）；三類之間要同時成立 */
+const entryAlive = e => e.kind === "item" ? S.items.includes(e.it) : !S.cgone[e.v.c];
+function mixTile(e, ctx) { return e.kind === "item" ? makeTile(e.it, ctx) : vidTile(e.v, ctx); }
+function mixCtx(pool, shown) {
+  const ctx = { next(key) {
+    shown.delete(key); const c = pool.filter(x => !shown.has(x.key) && x.key !== key && entryAlive(x));
+    if (!c.length) return null; const n = c[Math.floor(Math.random() * c.length)]; shown.add(n.key); return mixTile(n, ctx);
+  } };
+  return ctx;
 }
-/* ⭐ 最愛女優：用喜歡的女優去「全站」隨機。點選了幾位就只用那幾位；沒點選就用全部。每一格各自隨機挑一位 */
-function pickFav() {
-  const favs = S.cfg.kws;
-  if (!favs.length) return show(card("還沒有喜歡的女優", "先到下面「➕ 加入」輸入名字（加到「女優」）。"));
-  const chosen = [...active].filter(k => favs.includes(k)), names = chosen.length ? chosen : favs, low = names.map(x => x.toLowerCase());
-  pickVideos(v => { const h = vHay(v); return low.some(n => h.includes(n)); },
-    `⭐ ${chosen.length ? `你點選的 ${names.length} 位` : `全部 ${names.length} 位`}女優，從她們的影片裡隨機挑。`,
-    `影片庫裡沒有${names.length > 1 ? "這幾位" : "「" + names[0] + "」"}的影片`, names, []);
-}
-/* 全站隨機：每格是網站上的一個隨機頁（沒挑關鍵字就從「隨機來源」清單裡隨機挑一個樣式，再隨機頁碼） */
-function webUrl(ts, entry) {
-  const c = S.cfg; let tpl = ts.length ? c.search : c.list, maxPage = +c.max || 20;
-  if (entry) { tpl = entry.tpl; if (entry.max) maxPage = entry.max; }
-  else if (!ts.length && poolList().length) { const e = poolList()[Math.floor(Math.random() * poolList().length)]; tpl = e.tpl; if (e.max) maxPage = e.max; }
-  if (!tpl) return null;
-  const page = 1 + Math.floor(Math.random() * Math.max(1, maxPage));
-  return { url: tpl.replace("{kw}", encodeURIComponent(ts.join(" "))).replace("{page}", page), page };
-}
-function webTile(ts, tag, entry) {
-  const w = webUrl(ts, entry); if (!w) return el("div", "rt", "還沒設定全站隨機的網址（⚙ → 網站與規則）");
-  const t = el("div", "rt web"), nm = ts[0] || "", isAct = nm && S.cfg.kws.includes(nm);
-  const ph = el("a", "ph"); ph.href = w.url; ph.target = "_blank"; ph.rel = "noopener";
-  if (isAct && avatarSrc(nm)) {                       // 女優：用她的照片（或片單裡她的片封面）
-    const im = document.createElement("img"); im.referrerPolicy = "no-referrer"; im.alt = ""; im.src = avatarSrc(nm);
-    im.onerror = () => { im.replaceWith(el("div", "noimg", nm)); }; ph.appendChild(im);
-  } else ph.appendChild(el("div", "noimg", nm || (entry ? entry.label : "全站隨機")));
-  ph.appendChild(el("span", "bd", tag || (entry ? "📂 條件" : "🌐 全站"))); ph.appendChild(el("div", "cd", `${nm ? nm + "　" : entry ? entry.label + "　" : ""}第 ${w.page} 頁`));
-  const title = el("div", "rtt", ts.length ? `${ts.join("、")}　網站上的更多片` : entry ? `${entry.label}　的隨機一頁` : "網站上的隨機一頁");
-  const row = el("div", "rtb");
-  const open = el("a", "go", "▶ 開啟"); open.href = w.url; open.target = "_blank"; open.rel = "noopener";
-  const again = el("button", "", "🔁"); again.title = "換一頁"; again.onclick = () => t.replaceWith(webTile(ts, tag, entry));
-  row.append(open, again);
-  if (isAct) {                                       // 抽到的人 → 繼續抽她的隨機（4 個她的隨機頁）
-    const deep = el("button", "deep", "🎲"); deep.title = `繼續抽「${nm}」的隨機`;
-    deep.onclick = () => pickWeb([nm], "⭐ 女優", `⭐ 繼續抽「${nm}」：下面 ${pickN()} 格都是網站上她的隨機一頁（不同頁碼）。`);
-    row.appendChild(deep); t.classList.add("act");
-  }
-  t.append(ph, title, row);
-  return t;
-}
-function pickWeb() {
-  const acts = [...active], kws = [...activeW, ...tempRaw()], conds = poolList().filter(e => activeC.has(e.label));
+function pickAny() {
+  if (!SRC.list && !SRC.lib) return show(card("先選「從哪裡抽」", "上面點「📋 我的片單」或「📚 影片庫」（可以兩個都選）。"));
+  const acts = [...active].filter(k => S.cfg.kws.includes(k)), kws = [...activeW, ...tempRaw()], conds = poolList().filter(e => activeC.has(e.label));
   const la = acts.map(x => x.toLowerCase()), lk = kws.map(x => x.toLowerCase()), lc = conds.map(e => e.label.toLowerCase());
-  const f = v => {
-    const h = vHay(v), srcs = (v.s || []).map(x => String(x).toLowerCase());
-    return (!la.length || la.some(n => h.includes(n))) && lk.every(k => h.includes(k)) && (!lc.length || lc.some(c => srcs.includes(c)));
-  };
+  const textOk = h => (!la.length || la.some(n => h.includes(n))) && lk.every(k => h.includes(k));
+  const pool = [], codes = new Set();
+  if (SRC.list && !lc.length) for (const it of S.items) if (textOk((it.title + " " + it.code + " " + it.url).toLowerCase())) { pool.push({ kind: "item", it, key: keyOf(it) }); if (it.code) codes.add(it.code); }
+  if (SRC.lib) for (const v of candList()) {
+    if (S.cgone[v.c] || codes.has(v.c)) continue;
+    const srcs = (v.s || []).map(x => String(x).toLowerCase());
+    if (textOk(vHay(v)) && (!lc.length || lc.some(c => srcs.includes(c)))) pool.push({ kind: "vid", v, key: v.c });
+  }
   const parts = [acts.length ? `女優 ${acts.join("、")}（任一位）` : "", kws.length ? `關鍵字 ${kws.join("＋")}（要同時符合）` : "", conds.length ? `條件 ${conds.map(e => e.label).join("、")}（任一個）` : ""].filter(Boolean);
-  pickVideos(f, parts.length ? `🌐 ${parts.join("　")}。` : "🌐 全站：從整個影片庫隨機挑。",
-    `影片庫裡沒有${parts.length ? "同時符合 " + parts.join("、") + " 的" : ""}影片`, [...acts, ...kws], parts.length ? conds : poolList());
+  if (!pool.length) {
+    const none = `${[SRC.list ? "片單" : "", SRC.lib ? "影片庫" : ""].filter(Boolean).join("和")}裡沒有${parts.length ? "符合 " + parts.join("、") + " 的" : ""}影片`;
+    if (SRC.lib && (parts.length || !candList().length)) return collectCard(none + (SRC.list ? "" : "（只選了影片庫；也可以勾「📋 我的片單」一起抽）"), [...acts, ...kws], parts.length ? conds : poolList());
+    return show(card(none, SRC.list && !S.items.length ? "片單是空的，先到上面「➕ 加入」貼網址。" : ""));
+  }
+  const picks = drawFrom(pool, pickN()), shown = new Set(picks.map(e => e.key)), ctx = mixCtx(pool, shown);
+  save(false); showGrid(picks.map(e => mixTile(e, ctx)), `${parts.length ? parts.join("　") + "。" : "不限條件。"}符合的有 ${pool.length} 部。`);
 }
-$("doDraw").onclick = () => { if (mode === "list") pickMine(); else if (mode === "fav") pickFav(); else pickWeb(); };
+$("doDraw").onclick = pickAny;
+$("fab").onclick = () => { pickAny(); $("result").scrollIntoView({ behavior: "smooth", block: "start" }); };
 $("libClear").onclick = () => { if (!confirm("清空影片庫？（片單不受影響）")) return; for (const v of candList()) S.cgone[v.c] = Date.now(); S.cand = []; save(); renderLib(); toast("影片庫已清空"); };
 
 /* ───────── 片單 ───────── */
@@ -850,13 +819,14 @@ $("delSel").onclick = () => {
 $("doAdd").onclick = () => {
   const txt = $("paste").value.trim(); if (!txt) return $("addMsg").textContent = "先貼網址，或輸入女優名字／關鍵字。";
   if (!/https?:\/\//i.test(txt)) {                       // 沒有網址 → 當成女優／關鍵字（逗號、頓號、換行分開）
+    if (addTgt === "item") return $("addMsg").textContent = "「片單」要貼影片網址。要加名字的話，上面改選「⭐ 女優」或「🔑 關鍵字」。";
     const names = txt.split(/[\n,，、;；]+/).map(x => x.trim()).filter(Boolean), isW = addTgt === "word";
     let n = 0; for (const k of names) if (isW ? addWord(k) : addFav(k)) n++;
     if (n) save(); renderAll(); $("paste").value = "";
     return $("addMsg").textContent = n ? `${isW ? "🔑 已加進關鍵字" : "⭐ 已加進女優"} ${n} 個：${names.join("、")}` : `這些${isW ? "關鍵字" : "女優"}都已經有了。`;
   }
   const pairs = parsePaste(txt); if (!pairs.length) return $("addMsg").textContent = "沒看到網址。";
-  const r = addMany(pairs); $("addMsg").textContent = msgOf(r); $("paste").value = "";
+  const r = addMany(pairs); $("addMsg").textContent = msgOf(r) + (addTgt !== "item" ? "（有網址一律當影片加進片單；名字請不要夾網址）" : ""); $("paste").value = "";
 };
 $("doFile").onclick = () => $("file").click();
 $("file").onchange = async e => {
@@ -1090,6 +1060,7 @@ $("bm").onclick = e => { e.preventDefault(); toast("請拖到書籤列（手機�
 renderAll(); showIdle(); handleIncoming(); fillSettings();
 if (S.sync.token) sync();
 setTimeout(renderLib, 1200);
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* 不支援就算了 */ }
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
 </script>
 </body>
